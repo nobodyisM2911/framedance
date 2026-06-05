@@ -133,6 +133,8 @@
   --sidebar-ring: oklch(0.551 0.027 264.364);
 }
 
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap");
+
 @layer base {
   * {
     border-color: var(--color-border);
@@ -141,5 +143,11 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  .font-serif {
+    font-family: var(--font-serif);
+    font-weight: 400;
   }
 }
