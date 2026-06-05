@@ -2,6 +2,7 @@ import {
   FilesetResolver,
   PoseLandmarker,
   type PoseLandmarkerResult,
+  type NormalizedLandmark,
 } from "@mediapipe/tasks-vision";
 
 let landmarkerPromise: Promise<PoseLandmarker> | null = null;
@@ -26,30 +27,67 @@ export async function getPoseLandmarker(): Promise<PoseLandmarker> {
   return landmarkerPromise;
 }
 
-export type PoseSample = {
-  time: number;
-  movement: number;
-};
+export type Sensitivity = "low" | "medium" | "high";
 
 export type DetectedPose = {
   id: string;
   time: number;
   thumbnail: string;
+  movement: number;
+  landmarks: NormalizedLandmark[];
 };
 
-function landmarksDistance(
-  a: PoseLandmarkerResult,
-  b: PoseLandmarkerResult,
+// MediaPipe Pose landmark indices
+const L_SHOULDER = 11;
+const R_SHOULDER = 12;
+const L_HIP = 23;
+const R_HIP = 24;
+
+/**
+ * Normalize landmarks to torso-relative coordinates so scale/position don't
+ * dominate the movement score. Origin = mid-hip; unit = torso length
+ * (mid-shoulder to mid-hip distance).
+ */
+function normalizeLandmarks(
+  lms: NormalizedLandmark[],
+): NormalizedLandmark[] | null {
+  if (!lms || lms.length < 33) return null;
+  const ls = lms[L_SHOULDER];
+  const rs = lms[R_SHOULDER];
+  const lh = lms[L_HIP];
+  const rh = lms[R_HIP];
+  const midShoulder = {
+    x: (ls.x + rs.x) / 2,
+    y: (ls.y + rs.y) / 2,
+    z: ((ls.z ?? 0) + (rs.z ?? 0)) / 2,
+  };
+  const midHip = {
+    x: (lh.x + rh.x) / 2,
+    y: (lh.y + rh.y) / 2,
+    z: ((lh.z ?? 0) + (rh.z ?? 0)) / 2,
+  };
+  const dx = midShoulder.x - midHip.x;
+  const dy = midShoulder.y - midHip.y;
+  const torso = Math.sqrt(dx * dx + dy * dy);
+  if (torso < 1e-4) return null;
+  return lms.map((p) => ({
+    x: (p.x - midHip.x) / torso,
+    y: (p.y - midHip.y) / torso,
+    z: ((p.z ?? 0) - midHip.z) / torso,
+    visibility: p.visibility,
+  })) as NormalizedLandmark[];
+}
+
+function movementScore(
+  a: NormalizedLandmark[],
+  b: NormalizedLandmark[],
 ): number {
-  const la = a.landmarks[0];
-  const lb = b.landmarks[0];
-  if (!la || !lb) return Number.POSITIVE_INFINITY;
   let sum = 0;
-  const n = Math.min(la.length, lb.length);
+  const n = Math.min(a.length, b.length);
   for (let i = 0; i < n; i++) {
-    const dx = la[i].x - lb[i].x;
-    const dy = la[i].y - lb[i].y;
-    const dz = (la[i].z ?? 0) - (lb[i].z ?? 0);
+    const dx = a[i].x - b[i].x;
+    const dy = a[i].y - b[i].y;
+    const dz = (a[i].z ?? 0) - (b[i].z ?? 0);
     sum += Math.sqrt(dx * dx + dy * dy + dz * dz);
   }
   return sum / n;
@@ -62,14 +100,11 @@ async function seekTo(video: HTMLVideoElement, time: number): Promise<void> {
       resolve();
     };
     video.addEventListener("seeked", onSeeked);
-    video.currentTime = Math.min(time, video.duration - 0.001);
+    video.currentTime = Math.min(time, Math.max(0, video.duration - 0.001));
   });
 }
 
-function captureThumbnail(
-  video: HTMLVideoElement,
-  width = 240,
-): string {
+function captureThumbnail(video: HTMLVideoElement, width = 240): string {
   const ratio = video.videoHeight / video.videoWidth || 0.5625;
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -77,15 +112,50 @@ function captureThumbnail(
   const ctx = canvas.getContext("2d");
   if (!ctx) return "";
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL("image/jpeg", 0.75);
+  return canvas.toDataURL("image/jpeg", 0.78);
 }
 
 export type AnalyzeOptions = {
   fps?: number;
-  sensitivity: number; // 0..1; higher = more poses
+  sensitivity: Sensitivity;
   onProgress?: (p: number) => void;
   signal?: AbortSignal;
 };
+
+type Sample = {
+  time: number;
+  movement: number;
+  landmarks: NormalizedLandmark[] | null;
+};
+
+// Sensitivity tuning: percentile of movement scores used as the stillness
+// threshold, and minimum spacing between accepted poses.
+const SENS_CONFIG: Record<
+  Sensitivity,
+  { pct: number; minGap: number }
+> = {
+  low: { pct: 0.1, minGap: 1.2 }, // fewer major poses
+  medium: { pct: 0.25, minGap: 0.6 }, // main poses
+  high: { pct: 0.5, minGap: 0.4 }, // more small poses
+};
+
+function smooth(values: number[], window = 3): number[] {
+  const out = new Array(values.length);
+  const r = Math.floor(window / 2);
+  for (let i = 0; i < values.length; i++) {
+    let sum = 0;
+    let count = 0;
+    for (let j = i - r; j <= i + r; j++) {
+      if (j < 0 || j >= values.length) continue;
+      const v = values[j];
+      if (!isFinite(v)) continue;
+      sum += v;
+      count++;
+    }
+    out[i] = count ? sum / count : Number.POSITIVE_INFINITY;
+  }
+  return out;
+}
 
 export async function analyzeVideo(
   video: HTMLVideoElement,
@@ -97,40 +167,49 @@ export async function analyzeVideo(
   const duration = video.duration;
   if (!isFinite(duration) || duration <= 0) return [];
 
-  const samples: { time: number; movement: number }[] = [];
-  let prev: PoseLandmarkerResult | null = null;
   const wasPaused = video.paused;
   video.pause();
 
+  // Pass 1: sample landmarks + raw movement
+  const samples: Sample[] = [];
+  let prev: NormalizedLandmark[] | null = null;
   for (let t = 0; t < duration; t += dt) {
     if (opts.signal?.aborted) break;
     await seekTo(video, t);
-    const result = landmarker.detectForVideo(video, performance.now());
-    if (prev) {
-      const d = landmarksDistance(prev, result);
-      samples.push({ time: t, movement: d });
-    } else {
-      samples.push({ time: t, movement: Number.POSITIVE_INFINITY });
-    }
-    prev = result;
-    opts.onProgress?.(t / duration);
+    const result: PoseLandmarkerResult = landmarker.detectForVideo(
+      video,
+      performance.now(),
+    );
+    const norm = result.landmarks[0]
+      ? normalizeLandmarks(result.landmarks[0])
+      : null;
+    let movement = Number.POSITIVE_INFINITY;
+    if (prev && norm) movement = movementScore(prev, norm);
+    samples.push({ time: t, movement, landmarks: norm });
+    if (norm) prev = norm;
+    opts.onProgress?.((t / duration) * 0.9);
   }
 
-  // Determine threshold from sensitivity (lower threshold = stricter stillness)
-  const finite = samples.map((s) => s.movement).filter((v) => isFinite(v));
-  finite.sort((a, b) => a - b);
+  // Smooth movement scores to reduce jitter
+  const smoothed = smooth(
+    samples.map((s) => s.movement),
+    3,
+  );
+  smoothed.forEach((m, i) => (samples[i].movement = m));
+
+  // Threshold from sensitivity percentile of finite movement values
+  const finite = smoothed.filter((v) => isFinite(v)).sort((a, b) => a - b);
   if (finite.length === 0) return [];
-  // sensitivity 0 -> bottom 5%, 1 -> bottom 50%
-  const pct = 0.05 + opts.sensitivity * 0.45;
+  const { pct, minGap } = SENS_CONFIG[opts.sensitivity];
   const threshold = finite[Math.floor((finite.length - 1) * pct)];
 
-  // Find local minima below threshold, with min gap
-  const minGap = 0.6; // seconds
+  // Local minima below threshold, spaced by minGap
   const poses: DetectedPose[] = [];
   let lastTime = -Infinity;
   for (let i = 1; i < samples.length - 1; i++) {
     const s = samples[i];
     if (!isFinite(s.movement) || s.movement > threshold) continue;
+    if (!s.landmarks) continue;
     if (
       s.movement <= samples[i - 1].movement &&
       s.movement <= samples[i + 1].movement &&
@@ -142,11 +221,14 @@ export async function analyzeVideo(
         id: `${s.time.toFixed(3)}-${Math.random().toString(36).slice(2, 7)}`,
         time: s.time,
         thumbnail: thumb,
+        movement: s.movement,
+        landmarks: s.landmarks,
       });
       lastTime = s.time;
     }
   }
 
+  opts.onProgress?.(1);
   if (!wasPaused) video.play().catch(() => {});
   return poses;
 }
@@ -155,10 +237,23 @@ export async function captureCurrentPose(
   video: HTMLVideoElement,
 ): Promise<DetectedPose> {
   const thumb = captureThumbnail(video);
+  let landmarks: NormalizedLandmark[] = [];
+  try {
+    const landmarker = await getPoseLandmarker();
+    const result = landmarker.detectForVideo(video, performance.now());
+    const norm = result.landmarks[0]
+      ? normalizeLandmarks(result.landmarks[0])
+      : null;
+    if (norm) landmarks = norm;
+  } catch {
+    // ignore — manual mark still works without landmarks
+  }
   return {
     id: `${video.currentTime.toFixed(3)}-${Math.random().toString(36).slice(2, 7)}`,
     time: video.currentTime,
     thumbnail: thumb,
+    movement: 0,
+    landmarks,
   };
 }
 
