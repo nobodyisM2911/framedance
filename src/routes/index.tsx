@@ -1,13 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import {
   analyzeVideo,
   captureCurrentPose,
   formatTime,
   type DetectedPose,
+  type Sensitivity,
 } from "@/lib/pose-analyzer";
+
+const SENSITIVITY_LEVELS: { value: Sensitivity; label: string }[] = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+];
 
 export const Route = createFileRoute("/")({
   head: () => ({
