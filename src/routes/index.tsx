@@ -35,7 +35,7 @@ function Index() {
   const [poses, setPoses] = useState<DetectedPose[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [sensitivity, setSensitivity] = useState(0.5);
+  const [sensitivity, setSensitivity] = useState<Sensitivity>("medium");
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
