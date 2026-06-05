@@ -129,22 +129,25 @@ function Index() {
 
             <section className="grid gap-6 md:grid-cols-[1fr_auto] md:items-end">
               <div className="space-y-2">
-                <div className="flex items-baseline justify-between">
-                  <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                    Sensitivity
-                  </label>
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {Math.round(sensitivity * 100)}
-                  </span>
+                <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                  Sensitivity
+                </label>
+                <div className="inline-flex rounded-md border border-border bg-card p-0.5">
+                  {SENSITIVITY_LEVELS.map((s) => (
+                    <button
+                      key={s.value}
+                      onClick={() => setSensitivity(s.value)}
+                      disabled={analyzing}
+                      className={`rounded px-3 py-1 text-xs transition ${
+                        sensitivity === s.value
+                          ? "bg-foreground text-background"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
                 </div>
-                <Slider
-                  value={[sensitivity]}
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  onValueChange={(v) => setSensitivity(v[0])}
-                  disabled={analyzing}
-                />
               </div>
               <div className="flex gap-2">
                 <Button
