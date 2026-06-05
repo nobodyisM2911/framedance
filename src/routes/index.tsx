@@ -15,6 +15,8 @@ const SENSITIVITY_LEVELS: { value: Sensitivity; label: string }[] = [
   { value: "high", label: "High" },
 ];
 
+const PLAYBACK_SPEEDS = [0.5, 0.8, 1, 1.2];
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -36,6 +38,9 @@ function Index() {
   const [analyzing, setAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [sensitivity, setSensitivity] = useState<Sensitivity>("medium");
+  const [mirrored, setMirrored] = useState(false);
+  const [speed, setSpeed] = useState(1);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -44,9 +49,16 @@ function Index() {
     };
   }, [videoUrl]);
 
+  // Keep video element playbackRate in sync. currentTime is measured in media
+  // time, so pose timestamps remain accurate at any playback speed.
+  useEffect(() => {
+    if (videoRef.current) videoRef.current.playbackRate = speed;
+  }, [speed, videoUrl]);
+
   const onFile = (file: File) => {
     if (videoUrl) URL.revokeObjectURL(videoUrl);
     setPoses([]);
+    setSelectedId(null);
     setVideoUrl(URL.createObjectURL(file));
   };
 
@@ -81,26 +93,73 @@ function Index() {
     } finally {
       setAnalyzing(false);
       setProgress(1);
+      // Restore playback rate (analysis pauses/seeks the video)
+      if (videoRef.current) videoRef.current.playbackRate = speed;
     }
-  }, [sensitivity]);
+  }, [sensitivity, speed]);
 
-  const addCurrent = async () => {
+  const addCurrent = useCallback(async () => {
     const video = videoRef.current;
     if (!video) return;
     const pose = await captureCurrentPose(video);
     setPoses((prev) => [...prev, pose].sort((a, b) => a.time - b.time));
-  };
+    setSelectedId(pose.id);
+  }, []);
 
-  const jumpTo = (t: number) => {
+  const jumpTo = (t: number, id?: string) => {
     const video = videoRef.current;
     if (!video) return;
     video.currentTime = t;
     video.pause();
+    if (id) setSelectedId(id);
   };
 
-  const removePose = (id: string) => {
+  const removePose = useCallback((id: string) => {
     setPoses((prev) => prev.filter((p) => p.id !== id));
-  };
+    setSelectedId((cur) => (cur === id ? null : cur));
+  }, []);
+
+  const togglePlay = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) video.play().catch(() => {});
+    else video.pause();
+  }, []);
+
+  const toggleMirror = useCallback(() => setMirrored((m) => !m), []);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    if (!videoUrl) return;
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (e.key === " ") {
+        e.preventDefault();
+        togglePlay();
+      } else if (e.key === "m" || e.key === "M") {
+        e.preventDefault();
+        toggleMirror();
+      } else if (e.key === "a" || e.key === "A") {
+        e.preventDefault();
+        addCurrent();
+      } else if (e.key === "Delete" || e.key === "Backspace") {
+        if (selectedId) {
+          e.preventDefault();
+          removePose(selectedId);
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [videoUrl, selectedId, togglePlay, toggleMirror, addCurrent, removePose]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -124,10 +183,50 @@ function Index() {
                 src={videoUrl}
                 controls
                 className="aspect-video w-full"
+                style={{
+                  transform: mirrored ? "scaleX(-1)" : undefined,
+                }}
               />
             </div>
 
-            <section className="grid gap-6 md:grid-cols-[1fr_auto] md:items-end">
+            <section className="flex flex-wrap items-end gap-x-8 gap-y-4">
+              <div className="space-y-2">
+                <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                  Speed
+                </label>
+                <div className="inline-flex rounded-md border border-border bg-card p-0.5">
+                  {PLAYBACK_SPEEDS.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setSpeed(s)}
+                      className={`rounded px-3 py-1 font-mono text-xs transition ${
+                        speed === s
+                          ? "bg-foreground text-background"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {s}×
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                  View
+                </label>
+                <button
+                  onClick={toggleMirror}
+                  className={`rounded-md border px-3 py-1 text-xs transition ${
+                    mirrored
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-border bg-card text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Mirror
+                </button>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
                   Sensitivity
@@ -149,13 +248,14 @@ function Index() {
                   ))}
                 </div>
               </div>
-              <div className="flex gap-2">
+
+              <div className="ml-auto flex gap-2">
                 <Button
                   variant="outline"
                   onClick={addCurrent}
                   disabled={analyzing}
                 >
-                  Mark current frame
+                  Mark frame
                 </Button>
                 <Button onClick={runAnalysis} disabled={analyzing}>
                   {analyzing
@@ -184,12 +284,17 @@ function Index() {
                     <PoseCard
                       key={p.id}
                       pose={p}
-                      onJump={() => jumpTo(p.time)}
+                      mirrored={mirrored}
+                      selected={p.id === selectedId}
+                      onJump={() => jumpTo(p.time, p.id)}
                       onDelete={() => removePose(p.id)}
                     />
                   ))}
                 </div>
               )}
+              <p className="mt-4 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                Space play · M mirror · A add · Del remove
+              </p>
             </section>
           </div>
         )}
@@ -237,10 +342,14 @@ function Uploader({ onFile }: { onFile: (file: File) => void }) {
 
 function PoseCard({
   pose,
+  mirrored,
+  selected,
   onJump,
   onDelete,
 }: {
   pose: DetectedPose;
+  mirrored: boolean;
+  selected: boolean;
   onJump: () => void;
   onDelete: () => void;
 }) {
@@ -248,12 +357,17 @@ function PoseCard({
     <div className="group relative shrink-0">
       <button
         onClick={onJump}
-        className="block overflow-hidden rounded-md border border-border bg-card transition hover:border-foreground/40"
+        className={`block overflow-hidden rounded-md border bg-card transition ${
+          selected
+            ? "border-foreground"
+            : "border-border hover:border-foreground/40"
+        }`}
       >
         <img
           src={pose.thumbnail}
           alt={`Pose at ${formatTime(pose.time)}`}
           className="h-28 w-auto"
+          style={{ transform: mirrored ? "scaleX(-1)" : undefined }}
         />
         <div className="flex items-center justify-between px-2 py-1 font-mono text-[10px] text-muted-foreground">
           <span>{formatTime(pose.time)}</span>
