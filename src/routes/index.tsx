@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   analyzeVideo,
@@ -8,7 +8,15 @@ import {
   type DetectedPose,
   type Sensitivity,
 } from "@/lib/pose-analyzer";
-
+import {
+  analyzeAudio,
+  decodeAudio,
+  rebuildBeats,
+  type AudioAnalysis,
+} from "@/lib/audio-analyzer";
+import { parseLrc, type LyricLine } from "@/lib/lrc-parser";
+import { BeatTimeline } from "@/components/BeatTimeline";
+import { LyricsPanel } from "@/components/LyricsPanel";
 
 const SENSITIVITY_LEVELS: { value: Sensitivity; label: string }[] = [
   { value: "low", label: "Low" },
@@ -34,6 +42,8 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const fileRef = useRef<File | null>(null);
+
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [poses, setPoses] = useState<DetectedPose[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
@@ -44,24 +54,77 @@ function Index() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
+  // Audio analysis
+  const [audio, setAudio] = useState<AudioAnalysis | null>(null);
+  const [analyzingAudio, setAnalyzingAudio] = useState(false);
+  const [beatOffset, setBeatOffset] = useState(0); // seconds, added to first count
+  const [firstCount, setFirstCount] = useState(0); // adjustable downbeat time
+
+  // Lyrics
+  const [lyrics, setLyrics] = useState<LyricLine[]>([]);
+
+  // Live playback time for highlights
+  const [currentTime, setCurrentTime] = useState(0);
+
   useEffect(() => {
     return () => {
       if (videoUrl) URL.revokeObjectURL(videoUrl);
     };
   }, [videoUrl]);
 
-  // Keep video element playbackRate in sync. currentTime is measured in media
-  // time, so pose timestamps remain accurate at any playback speed.
   useEffect(() => {
     if (videoRef.current) videoRef.current.playbackRate = speed;
   }, [speed, videoUrl]);
 
+  // Track currentTime
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    let raf = 0;
+    const tick = () => {
+      setCurrentTime(v.currentTime);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [videoUrl]);
+
+  // Derived beat timeline that respects firstCount + beatOffset.
+  const adjustedBeats = useMemo(() => {
+    if (!audio) return { beats: [] as number[], accents: [] as number[] };
+    return rebuildBeats(
+      audio.bpm,
+      Math.max(0, firstCount + beatOffset),
+      audio.duration,
+    );
+  }, [audio, firstCount, beatOffset]);
+
   const onFile = (file: File) => {
+    fileRef.current = file;
     if (videoUrl) URL.revokeObjectURL(videoUrl);
     setPoses([]);
     setSelectedId(null);
+    setAudio(null);
+    setBeatOffset(0);
+    setFirstCount(0);
     setVideoUrl(URL.createObjectURL(file));
   };
+
+  const runAudioAnalysis = useCallback(async () => {
+    if (!fileRef.current) return;
+    setAnalyzingAudio(true);
+    try {
+      const buf = await decodeAudio(fileRef.current);
+      const result = await analyzeAudio(buf);
+      setAudio(result);
+      setFirstCount(result.firstBeat);
+      setBeatOffset(0);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setAnalyzingAudio(false);
+    }
+  }, []);
 
   const runAnalysis = useCallback(async () => {
     const video = videoRef.current;
@@ -85,6 +148,8 @@ function Index() {
         sensitivity,
         onProgress: setProgress,
         signal: ctrl.signal,
+        beats: adjustedBeats.beats,
+        accents: adjustedBeats.accents,
       });
       setPoses((prev) =>
         [...prev, ...result].sort((a, b) => a.time - b.time),
@@ -94,10 +159,9 @@ function Index() {
     } finally {
       setAnalyzing(false);
       setProgress(1);
-      // Restore playback rate (analysis pauses/seeks the video)
       if (videoRef.current) videoRef.current.playbackRate = speed;
     }
-  }, [sensitivity, speed]);
+  }, [sensitivity, speed, adjustedBeats]);
 
   const addCurrent = useCallback(async () => {
     const video = videoRef.current;
@@ -107,17 +171,25 @@ function Index() {
     setSelectedId(pose.id);
   }, []);
 
-  const jumpTo = (t: number, id?: string) => {
+  const jumpTo = useCallback((t: number, id?: string) => {
     const video = videoRef.current;
     if (!video) return;
     video.currentTime = t;
     video.pause();
     if (id) setSelectedId(id);
-  };
+  }, []);
 
   const removePose = useCallback((id: string) => {
     setPoses((prev) => prev.filter((p) => p.id !== id));
     setSelectedId((cur) => (cur === id ? null : cur));
+  }, []);
+
+  const movePose = useCallback((id: string, newTime: number) => {
+    setPoses((prev) =>
+      prev
+        .map((p) => (p.id === id ? { ...p, time: newTime } : p))
+        .sort((a, b) => a.time - b.time),
+    );
   }, []);
 
   const togglePlay = useCallback(() => {
@@ -162,6 +234,11 @@ function Index() {
     return () => window.removeEventListener("keydown", handler);
   }, [videoUrl, selectedId, togglePlay, toggleMirror, addCurrent, removePose]);
 
+  const onLyricsFile = useCallback(async (f: File) => {
+    const text = await f.text();
+    setLyrics(parseLrc(text));
+  }, []);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border">
@@ -183,23 +260,96 @@ function Index() {
         </div>
       </header>
 
-
       <main className="mx-auto max-w-6xl px-6 py-10">
         {!videoUrl ? (
           <Uploader onFile={onFile} />
         ) : (
           <div className="space-y-8">
-            <div className="overflow-hidden rounded-md bg-black">
-              <video
-                ref={videoRef}
-                src={videoUrl}
-                controls
-                className="aspect-video w-full"
-                style={{
-                  transform: mirrored ? "scaleX(-1)" : undefined,
-                }}
-              />
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="md:col-span-2">
+                <div className="overflow-hidden rounded-md bg-black">
+                  <video
+                    ref={videoRef}
+                    src={videoUrl}
+                    controls
+                    className="aspect-video w-full"
+                    style={{
+                      transform: mirrored ? "scaleX(-1)" : undefined,
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="md:col-span-1">
+                <LyricsPanel
+                  lyrics={lyrics}
+                  currentTime={currentTime}
+                  onUpload={onLyricsFile}
+                  onClear={() => setLyrics([])}
+                  onSeek={(t) => jumpTo(t)}
+                />
+              </div>
             </div>
+
+            {/* Rhythm */}
+            <section className="space-y-3">
+              <div className="flex flex-wrap items-end justify-between gap-4">
+                <div>
+                  <h2 className="font-serif text-lg">Rhythm</h2>
+                  <p className="text-xs text-muted-foreground">
+                    {audio
+                      ? `${audio.bpm.toFixed(1)} BPM · ${adjustedBeats.beats.length} beats · ${audio.accents.length} accents · ${audio.peaks.length} peaks · ${audio.drops.length} drops`
+                      : "Detect BPM, beats, accents, and energy peaks."}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={runAudioAnalysis}
+                  disabled={analyzingAudio}
+                >
+                  {analyzingAudio
+                    ? "Analyzing audio…"
+                    : audio
+                      ? "Re-analyze audio"
+                      : "Analyze audio"}
+                </Button>
+              </div>
+
+              {audio && (
+                <>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <RangeControl
+                      label="First count"
+                      value={firstCount}
+                      min={0}
+                      max={Math.min(8, audio.duration)}
+                      step={0.01}
+                      unit="s"
+                      onChange={setFirstCount}
+                    />
+                    <RangeControl
+                      label="Beat offset"
+                      value={beatOffset}
+                      min={-0.5}
+                      max={0.5}
+                      step={0.005}
+                      unit="s"
+                      onChange={setBeatOffset}
+                    />
+                  </div>
+                  <BeatTimeline
+                    beats={adjustedBeats.beats}
+                    accents={adjustedBeats.accents}
+                    duration={audio.duration}
+                    currentTime={currentTime}
+                    poses={poses}
+                    selectedPoseId={selectedId}
+                    onPoseSelect={setSelectedId}
+                    onPoseDrag={movePose}
+                    onSeek={(t) => jumpTo(t)}
+                  />
+                </>
+              )}
+            </section>
 
             <section className="flex flex-wrap items-end gap-x-8 gap-y-4">
               <div className="space-y-2">
@@ -305,12 +455,55 @@ function Index() {
                 </div>
               )}
               <p className="mt-4 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                Space play · M mirror · A add · Del remove
+                Space play · M mirror · A add · Del remove · drag ◆ on timeline
+                to refine timing
               </p>
             </section>
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+function RangeControl({
+  label,
+  value,
+  min,
+  max,
+  step,
+  unit,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  unit: string;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-baseline justify-between">
+        <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+          {label}
+        </label>
+        <span className="font-mono text-xs text-muted-foreground">
+          {value >= 0 ? "+" : ""}
+          {value.toFixed(3)}
+          {unit}
+        </span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        className="w-full accent-foreground"
+      />
     </div>
   );
 }
