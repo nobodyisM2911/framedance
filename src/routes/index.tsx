@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,6 +8,7 @@ import {
   type DetectedPose,
   type Sensitivity,
 } from "@/lib/pose-analyzer";
+
 
 const SENSITIVITY_LEVELS: { value: Sensitivity; label: string }[] = [
   { value: "low", label: "Low" },
@@ -165,12 +166,23 @@ function Index() {
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-6xl items-baseline justify-between px-6 py-5">
-          <h1 className="font-serif text-2xl tracking-tight">Stillframe</h1>
+          <div className="flex items-baseline gap-6">
+            <h1 className="font-serif text-2xl tracking-tight">Stillframe</h1>
+            <nav className="flex gap-4 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              <Link to="/" className="text-foreground">
+                Practice
+              </Link>
+              <Link to="/compare" className="hover:text-foreground">
+                Compare
+              </Link>
+            </nav>
+          </div>
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
             Dance practice
           </p>
         </div>
       </header>
+
 
       <main className="mx-auto max-w-6xl px-6 py-10">
         {!videoUrl ? (
