@@ -120,6 +120,9 @@ export type AnalyzeOptions = {
   sensitivity: Sensitivity;
   onProgress?: (p: number) => void;
   signal?: AbortSignal;
+  /** Optional rhythm cues to bias key-pose selection toward beats/accents. */
+  beats?: number[];
+  accents?: number[];
 };
 
 type Sample = {
@@ -156,6 +159,59 @@ function smooth(values: number[], window = 3): number[] {
   }
   return out;
 }
+
+/** Closeness 0..1 to the nearest time in `times` within `radius` seconds. */
+function proximity(time: number, times: number[], radius: number): number {
+  if (!times || times.length === 0 || radius <= 0) return 0;
+  // Binary search for nearest neighbor.
+  let lo = 0;
+  let hi = times.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (times[mid] < time) lo = mid + 1;
+    else hi = mid;
+  }
+  const candidates = [times[lo]];
+  if (lo > 0) candidates.push(times[lo - 1]);
+  let best = Infinity;
+  for (const c of candidates) {
+    const d = Math.abs(c - time);
+    if (d < best) best = d;
+  }
+  if (best > radius) return 0;
+  return 1 - best / radius;
+}
+
+/**
+ * Direction-change score for samples[i]: angle between (i → i-1) and
+ * (i+1 → i) landmark-velocity vectors, averaged across landmarks.
+ * Higher = more direction reversal (i.e. a turning point in motion).
+ */
+function directionChangeScore(
+  prev: NormalizedLandmark[] | null,
+  curr: NormalizedLandmark[] | null,
+  next: NormalizedLandmark[] | null,
+): number {
+  if (!prev || !curr || !next) return 0;
+  const n = Math.min(prev.length, curr.length, next.length);
+  let total = 0;
+  let count = 0;
+  for (let i = 0; i < n; i++) {
+    const v1x = curr[i].x - prev[i].x;
+    const v1y = curr[i].y - prev[i].y;
+    const v2x = next[i].x - curr[i].x;
+    const v2y = next[i].y - curr[i].y;
+    const m1 = Math.sqrt(v1x * v1x + v1y * v1y);
+    const m2 = Math.sqrt(v2x * v2x + v2y * v2y);
+    if (m1 < 1e-4 || m2 < 1e-4) continue;
+    const cos = (v1x * v2x + v1y * v2y) / (m1 * m2);
+    // 0 when same direction, 1 when reversed.
+    total += (1 - Math.max(-1, Math.min(1, cos))) / 2;
+    count++;
+  }
+  return count ? total / count : 0;
+}
+
 
 export async function analyzeVideo(
   video: HTMLVideoElement,
