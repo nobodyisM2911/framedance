@@ -77,14 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "Stillframe" },
+      { name: "description", content: "help people to learn a street dance choreography dance by mirror, slow version, and every still frame pose" },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "Stillframe" },
+      { property: "og:description", content: "help people to learn a street dance choreography dance by mirror, slow version, and every still frame pose" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Stillframe" },
+      { name: "twitter:description", content: "help people to learn a street dance choreography dance by mirror, slow version, and every still frame pose" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/352e2616-5c8a-4e07-bd0c-4a189314a8c4" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/352e2616-5c8a-4e07-bd0c-4a189314a8c4" },
     ],
     links: [
       {
