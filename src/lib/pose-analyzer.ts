@@ -253,36 +253,79 @@ export async function analyzeVideo(
   );
   smoothed.forEach((m, i) => (samples[i].movement = m));
 
-  // Threshold from sensitivity percentile of finite movement values
-  const finite = smoothed.filter((v) => isFinite(v)).sort((a, b) => a - b);
-  if (finite.length === 0) return [];
+  // Direction-change score per sample (turning points in motion).
+  const dirChange = new Array<number>(samples.length).fill(0);
+  for (let i = 1; i < samples.length - 1; i++) {
+    dirChange[i] = directionChangeScore(
+      samples[i - 1].landmarks,
+      samples[i].landmarks,
+      samples[i + 1].landmarks,
+    );
+  }
+
   const { pct, minGap } = SENS_CONFIG[opts.sensitivity];
+  const beats = opts.beats ?? [];
+  const accents = opts.accents ?? [];
+  // Beat / accent proximity radius — within half a beat (estimated).
+  const beatRadius = beats.length > 1 ? (beats[1] - beats[0]) * 0.4 : 0;
+
+  // Combined key-pose score (lower = better): stability dominates, but
+  // direction-change and beat / accent proximity pull good candidates down.
+  const combined = samples.map((s, i) => {
+    if (!isFinite(s.movement)) return Number.POSITIVE_INFINITY;
+    const dc = dirChange[i]; // 0..1
+    const bp = proximity(s.time, beats, beatRadius); // 0..1
+    const ap = proximity(s.time, accents, beatRadius); // 0..1
+    return s.movement * (1 - 0.25 * bp - 0.2 * ap) - 0.15 * dc * s.movement;
+  });
+
+  // Threshold from sensitivity percentile of finite combined scores.
+  const finite = combined.filter((v) => isFinite(v)).sort((a, b) => a - b);
+  if (finite.length === 0) return [];
   const threshold = finite[Math.floor((finite.length - 1) * pct)];
 
-  // Local minima below threshold, spaced by minGap
+  // Local minima of combined score below threshold, spaced by minGap.
   const poses: DetectedPose[] = [];
   let lastTime = -Infinity;
   for (let i = 1; i < samples.length - 1; i++) {
     const s = samples[i];
-    if (!isFinite(s.movement) || s.movement > threshold) continue;
+    const c = combined[i];
+    if (!isFinite(c) || c > threshold) continue;
     if (!s.landmarks) continue;
     if (
-      s.movement <= samples[i - 1].movement &&
-      s.movement <= samples[i + 1].movement &&
+      c <= combined[i - 1] &&
+      c <= combined[i + 1] &&
       s.time - lastTime >= minGap
     ) {
-      await seekTo(video, s.time);
+      // Snap to the nearest beat if it's within a quarter-beat.
+      let snapTime = s.time;
+      if (beats.length && beatRadius > 0) {
+        let best = snapTime;
+        let bestD = Infinity;
+        // Linear scan a tiny window — beats are sorted.
+        for (const b of beats) {
+          const d = Math.abs(b - s.time);
+          if (d < bestD) {
+            bestD = d;
+            best = b;
+          }
+          if (b > s.time + beatRadius) break;
+        }
+        if (bestD <= beatRadius * 0.5) snapTime = best;
+      }
+      await seekTo(video, snapTime);
       const thumb = captureThumbnail(video);
       poses.push({
-        id: `${s.time.toFixed(3)}-${Math.random().toString(36).slice(2, 7)}`,
-        time: s.time,
+        id: `${snapTime.toFixed(3)}-${Math.random().toString(36).slice(2, 7)}`,
+        time: snapTime,
         thumbnail: thumb,
         movement: s.movement,
         landmarks: s.landmarks,
       });
-      lastTime = s.time;
+      lastTime = snapTime;
     }
   }
+
 
   opts.onProgress?.(1);
   if (!wasPaused) video.play().catch(() => {});
