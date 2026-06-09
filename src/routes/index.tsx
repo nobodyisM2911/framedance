@@ -72,6 +72,9 @@ function Index() {
   // Live playback time for highlights
   const [currentTime, setCurrentTime] = useState(0);
 
+  // Support modal
+  const [supportOpen, setSupportOpen] = useState(false);
+
   useEffect(() => {
     return () => {
       if (videoUrl) URL.revokeObjectURL(videoUrl);
