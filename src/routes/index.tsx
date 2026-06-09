@@ -14,7 +14,7 @@ import {
   rebuildBeats,
   type AudioAnalysis,
 } from "@/lib/audio-analyzer";
-import { parseLrc, type LyricLine } from "@/lib/lrc-parser";
+import { type LyricLine } from "@/lib/lrc-parser";
 import { BeatTimeline } from "@/components/BeatTimeline";
 import { LyricsPanel } from "@/components/LyricsPanel";
 
@@ -234,10 +234,6 @@ function Index() {
     return () => window.removeEventListener("keydown", handler);
   }, [videoUrl, selectedId, togglePlay, toggleMirror, addCurrent, removePose]);
 
-  const onLyricsFile = useCallback(async (f: File) => {
-    const text = await f.text();
-    setLyrics(parseLrc(text));
-  }, []);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -283,8 +279,9 @@ function Index() {
                 <LyricsPanel
                   lyrics={lyrics}
                   currentTime={currentTime}
-                  onUpload={onLyricsFile}
-                  onClear={() => setLyrics([])}
+                  audioFile={fileRef.current}
+                  duration={audio?.duration ?? videoRef.current?.duration}
+                  onChange={setLyrics}
                   onSeek={(t) => jumpTo(t)}
                 />
               </div>
