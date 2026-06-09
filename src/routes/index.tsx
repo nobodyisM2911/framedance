@@ -468,6 +468,45 @@ function Index() {
           </div>
         )}
       </main>
+
+      <footer className="border-t border-border">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+          <p className="text-[11px] tracking-[0.12em] text-muted-foreground">
+            Built by M2911
+          </p>
+          <button
+            onClick={() => setSupportOpen(true)}
+            className="text-[11px] tracking-[0.12em] text-muted-foreground transition hover:text-foreground"
+          >
+            🍋 请这个做出好工具的人喝杯柠檬水（¥2）
+          </button>
+        </div>
+      </footer>
+
+      <Dialog open={supportOpen} onOpenChange={setSupportOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-center font-serif text-base tracking-tight">
+              For dancers.
+              <br />
+              By a dancer.
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2 text-center">
+            <p className="text-2xl">🍋</p>
+            <p className="font-serif text-base tracking-tight">
+              请这个做出好工具的人喝杯柠檬水
+            </p>
+            <p className="font-mono text-sm text-muted-foreground">¥2</p>
+            <p className="text-xs text-muted-foreground">
+              感谢支持这个项目。
+            </p>
+            <p className="text-[11px] tracking-[0.12em] text-muted-foreground">
+              — M2911
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
