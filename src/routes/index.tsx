@@ -14,7 +14,7 @@ import {
   rebuildBeats,
   type AudioAnalysis,
 } from "@/lib/audio-analyzer";
-import { parseLrc, type LyricLine } from "@/lib/lrc-parser";
+import { type LyricLine } from "@/lib/lrc-parser";
 import { BeatTimeline } from "@/components/BeatTimeline";
 import { LyricsPanel } from "@/components/LyricsPanel";
 
