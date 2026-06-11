@@ -138,39 +138,46 @@ function ComparePage() {
       setExportUrl(null);
     }
     try {
+      if (typeof Worker === "undefined" || typeof WebAssembly === "undefined") {
+        throw new Error(
+          "Export is not supported in this browser. Please try Chrome desktop.",
+        );
+      }
       const { FFmpeg } = await import("@ffmpeg/ffmpeg");
       const { fetchFile, toBlobURL } = await import("@ffmpeg/util");
       const ffmpeg = new FFmpeg();
       ffmpeg.on("progress", ({ progress }) => {
-        if (isFinite(progress)) setExportProgress(Math.min(1, progress));
+        if (isFinite(progress)) setExportProgress(Math.min(1, Math.max(0, progress)));
       });
-      const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.10/dist/umd";
-      await ffmpeg.load({
-        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-        wasmURL: await toBlobURL(
-          `${baseURL}/ffmpeg-core.wasm`,
-          "application/wasm",
-        ),
+      ffmpeg.on("log", ({ message }) => {
+        console.log("[ffmpeg]", message);
       });
-      setExportMsg("Preparing files…");
-      await ffmpeg.writeFile(
-        "teacher.mp4",
-        await fetchFile(teacherFile.current),
-      );
-      await ffmpeg.writeFile(
-        "student.mp4",
-        await fetchFile(studentFile.current),
-      );
+
+      // Single-threaded core (works without cross-origin isolation).
+      const coreVersion = "0.12.10";
+      const ffmpegVersion = "0.12.15";
+      const coreBase = `https://unpkg.com/@ffmpeg/core@${coreVersion}/dist/umd`;
+      const ffmpegBase = `https://unpkg.com/@ffmpeg/ffmpeg@${ffmpegVersion}/dist/umd`;
+
+      const [coreURL, wasmURL, classWorkerURL] = await Promise.all([
+        toBlobURL(`${coreBase}/ffmpeg-core.js`, "text/javascript"),
+        toBlobURL(`${coreBase}/ffmpeg-core.wasm`, "application/wasm"),
+        toBlobURL(`${ffmpegBase}/814.ffmpeg.js`, "text/javascript"),
+      ]);
+
+      await ffmpeg.load({ coreURL, wasmURL, classWorkerURL });
+
+      setExportMsg("Preparing videos…");
+      await ffmpeg.writeFile("teacher.mp4", await fetchFile(teacherFile.current));
+      await ffmpeg.writeFile("student.mp4", await fetchFile(studentFile.current));
 
       // Sync logic:
-      //   offset > 0 → student starts `offset`s later than teacher.
-      //     trim teacher start by `offset` (or delay student by `offset`).
-      //   offset < 0 → student starts earlier; trim student by |offset|.
+      //   offset > 0 → student starts `offset`s later than teacher → trim teacher start.
+      //   offset < 0 → student starts earlier → trim student start.
       const teacherTrim = offset > 0 ? offset : 0;
       const studentTrim = offset < 0 ? -offset : 0;
 
-      setExportMsg("Encoding side-by-side video…");
-      // Scale both to 540x960 (portrait) then hstack. Use copy of teacher audio.
+      setExportMsg("Rendering side-by-side video…");
       const args = [
         "-ss",
         teacherTrim.toString(),
@@ -202,9 +209,10 @@ function ComparePage() {
       const blob = new Blob([data.buffer as ArrayBuffer], { type: "video/mp4" });
       const url = URL.createObjectURL(blob);
       setExportUrl(url);
-      setExportMsg("Done");
+      setExportProgress(1);
+      setExportMsg("Export complete");
     } catch (e) {
-      console.error(e);
+      console.error("[export] failed", e);
       setExportMsg(
         `Export failed: ${e instanceof Error ? e.message : String(e)}`,
       );
@@ -212,6 +220,7 @@ function ComparePage() {
       setExporting(false);
     }
   }, [offset, exportUrl]);
+
 
   const both = teacherUrl && studentUrl;
 
