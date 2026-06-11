@@ -23,6 +23,9 @@ import {
 import { type LyricLine } from "@/lib/lrc-parser";
 import { BeatTimeline } from "@/components/BeatTimeline";
 import { LyricsPanel } from "@/components/LyricsPanel";
+import { Toaster } from "@/components/ui/sonner";
+import { toast } from "sonner";
+import alipayQr from "@/assets/alipay-qr.jpg.asset.json";
 
 const SENSITIVITY_LEVELS: { value: Sensitivity; label: string }[] = [
   { value: "low", label: "Low" },
@@ -498,7 +501,36 @@ function Index() {
               请这个做出好工具的人喝杯柠檬水
             </p>
             <p className="font-mono text-sm text-muted-foreground">¥2</p>
-            <p className="text-xs text-muted-foreground">
+            <div className="flex flex-col items-center gap-2 pt-1">
+              <img
+                src={alipayQr.url}
+                alt="Alipay QR ¥2"
+                className="w-48 h-auto rounded-md border border-border"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                支付宝扫码支持 ¥2
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2 pt-1">
+              <a
+                href={alipayQr.url}
+                download="alipay-qr.jpg"
+                className="text-[11px] px-3 py-1 rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
+              >
+                保存二维码
+              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  setSupportOpen(false);
+                  toast("谢谢你请我喝柠檬水 🍋");
+                }}
+                className="text-[11px] px-3 py-1 rounded text-muted-foreground hover:text-foreground transition-colors"
+              >
+                我已请你喝柠檬水 🍋
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground pt-2">
               感谢支持这个项目。
             </p>
             <p className="text-[11px] tracking-[0.12em] text-muted-foreground">
@@ -507,6 +539,7 @@ function Index() {
           </div>
         </DialogContent>
       </Dialog>
+      <Toaster />
     </div>
   );
 }
