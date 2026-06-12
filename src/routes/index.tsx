@@ -250,10 +250,10 @@ function Index() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border">
-        <div className="mx-auto flex max-w-6xl items-baseline justify-between px-6 py-5">
-          <div className="flex items-baseline gap-6">
-            <h1 className="font-serif text-2xl tracking-tight">Stillframe</h1>
-            <nav className="flex gap-4 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+        <div className="mx-auto flex max-w-6xl items-baseline justify-between px-6 py-7">
+          <div className="flex items-baseline gap-8">
+            <h1 className="font-serif text-[1.75rem] font-normal leading-none tracking-normal">Stillframe</h1>
+            <nav className="flex gap-6 text-[0.7rem] uppercase tracking-[0.28em] text-muted-foreground">
               <Link to="/" className="text-foreground">
                 Practice
               </Link>
@@ -262,7 +262,7 @@ function Index() {
               </Link>
             </nav>
           </div>
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-[0.7rem] uppercase tracking-[0.28em] text-muted-foreground">
             Dance practice
           </p>
         </div>
@@ -590,7 +590,7 @@ function Uploader({ onFile }: { onFile: (file: File) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   return (
     <div
-      className="flex flex-col items-center justify-center gap-4 rounded-md border border-dashed border-border bg-card px-6 py-24 text-center"
+      className="flex flex-col items-center justify-center gap-6 rounded-md border border-dashed border-border bg-card px-6 py-28 text-center"
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         e.preventDefault();
@@ -598,10 +598,10 @@ function Uploader({ onFile }: { onFile: (file: File) => void }) {
         if (file && file.type.startsWith("video/")) onFile(file);
       }}
     >
-      <h2 className="font-serif text-3xl tracking-tight">
+      <h2 className="font-serif text-4xl font-normal leading-[1.15] tracking-normal md:text-5xl">
         Study your dance, frame by frame.
       </h2>
-      <p className="max-w-md text-sm text-muted-foreground">
+      <p className="mt-2 max-w-lg text-sm leading-relaxed text-muted-foreground">
         Upload a video. We&rsquo;ll find the still moments — the shapes
         between motion — and lay them out for you to scrub through.
       </p>
@@ -615,7 +615,7 @@ function Uploader({ onFile }: { onFile: (file: File) => void }) {
           if (file) onFile(file);
         }}
       />
-      <Button className="mt-2" onClick={() => inputRef.current?.click()}>
+      <Button className="mt-4" onClick={() => inputRef.current?.click()}>
         Choose a video
       </Button>
       <p className="text-xs text-muted-foreground">or drop a file here</p>

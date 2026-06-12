@@ -227,12 +227,12 @@ function ComparePage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border">
-        <div className="mx-auto flex max-w-6xl items-baseline justify-between px-6 py-5">
-          <div className="flex items-baseline gap-6">
-            <Link to="/" className="font-serif text-2xl tracking-tight">
+        <div className="mx-auto flex max-w-6xl items-baseline justify-between px-6 py-7">
+          <div className="flex items-baseline gap-8">
+            <Link to="/" className="font-serif text-[1.75rem] font-normal leading-none tracking-normal">
               Stillframe
             </Link>
-            <nav className="flex gap-4 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            <nav className="flex gap-6 text-[0.7rem] uppercase tracking-[0.28em] text-muted-foreground">
               <Link to="/" className="hover:text-foreground">
                 Practice
               </Link>
@@ -245,7 +245,7 @@ function ComparePage() {
               </Link>
             </nav>
           </div>
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-[0.7rem] uppercase tracking-[0.28em] text-muted-foreground">
             Side by side
           </p>
         </div>
