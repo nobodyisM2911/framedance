@@ -416,7 +416,7 @@ function ComparePage() {
               <div className="flex items-baseline justify-between">
                 <h2 className="font-serif text-lg">Export</h2>
                 <span className="text-xs text-muted-foreground">
-                  Side-by-side MP4 via FFmpeg.wasm
+                  Side-by-side WebM via Canvas + MediaRecorder
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-3">
