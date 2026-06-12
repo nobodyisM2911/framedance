@@ -199,8 +199,8 @@ function ComparePage() {
         }),
       ]);
 
-      const cellW = 640;
-      const cellH = 360;
+      const cellW = 960;
+      const cellH = 1080;
       const canvas = document.createElement("canvas");
       canvas.width = cellW * 2;
       canvas.height = cellH;
@@ -209,6 +209,8 @@ function ComparePage() {
       ctx.fillStyle = "#000";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+      // Cover-fit: scale so the video fills the cell, cropping equally from
+      // the longer axis. Removes black bars so dancers fill the frame.
       const drawFitted = (
         v: HTMLVideoElement,
         x: number,
@@ -219,12 +221,20 @@ function ComparePage() {
         ctx.fillStyle = "#000";
         ctx.fillRect(x, y, w, h);
         if (!v.videoWidth || !v.videoHeight) return;
-        const scale = Math.min(w / v.videoWidth, h / v.videoHeight);
-        const dw = v.videoWidth * scale;
-        const dh = v.videoHeight * scale;
-        const dx = x + (w - dw) / 2;
-        const dy = y + (h - dh) / 2;
-        ctx.drawImage(v, dx, dy, dw, dh);
+        const srcAspect = v.videoWidth / v.videoHeight;
+        const dstAspect = w / h;
+        let sx = 0;
+        let sy = 0;
+        let sw = v.videoWidth;
+        let sh = v.videoHeight;
+        if (srcAspect > dstAspect) {
+          sw = v.videoHeight * dstAspect;
+          sx = (v.videoWidth - sw) / 2;
+        } else {
+          sh = v.videoWidth / dstAspect;
+          sy = (v.videoHeight - sh) / 2;
+        }
+        ctx.drawImage(v, sx, sy, sw, sh, x, y, w, h);
       };
 
       const fps = 30;
