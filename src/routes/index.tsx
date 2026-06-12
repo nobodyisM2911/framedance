@@ -250,10 +250,10 @@ function Index() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border">
-        <div className="mx-auto flex max-w-6xl items-baseline justify-between px-6 py-5">
-          <div className="flex items-baseline gap-6">
-            <h1 className="font-serif text-2xl tracking-tight">Stillframe</h1>
-            <nav className="flex gap-4 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+        <div className="mx-auto flex max-w-6xl items-baseline justify-between px-6 py-7">
+          <div className="flex items-baseline gap-8">
+            <h1 className="font-serif text-[1.75rem] font-normal leading-none tracking-normal">Stillframe</h1>
+            <nav className="flex gap-6 text-[0.7rem] uppercase tracking-[0.28em] text-muted-foreground">
               <Link to="/" className="text-foreground">
                 Practice
               </Link>
@@ -262,7 +262,7 @@ function Index() {
               </Link>
             </nav>
           </div>
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-[0.7rem] uppercase tracking-[0.28em] text-muted-foreground">
             Dance practice
           </p>
         </div>
