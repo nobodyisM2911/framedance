@@ -129,84 +129,178 @@ function ComparePage() {
   }, [togglePlay]);
 
   const exportSideBySide = useCallback(async () => {
-    if (!teacherFile.current || !studentFile.current) return;
+    const tFile = teacherFile.current;
+    const sFile = studentFile.current;
+    if (!tFile || !sFile) return;
     setExporting(true);
     setExportProgress(0);
-    setExportMsg("Loading FFmpeg…");
+    setExportMsg("Preparing videos…");
     if (exportUrl) {
       URL.revokeObjectURL(exportUrl);
       setExportUrl(null);
     }
+
+    teacherRef.current?.pause();
+    studentRef.current?.pause();
+    setPlaying(false);
+
+    const tVid = document.createElement("video");
+    const sVid = document.createElement("video");
+    tVid.src = URL.createObjectURL(tFile);
+    sVid.src = URL.createObjectURL(sFile);
+    tVid.muted = false;
+    sVid.muted = true;
+    tVid.playsInline = true;
+    sVid.playsInline = true;
+
+    const cleanupVids = () => {
+      URL.revokeObjectURL(tVid.src);
+      URL.revokeObjectURL(sVid.src);
+    };
+
     try {
-      if (typeof Worker === "undefined" || typeof WebAssembly === "undefined") {
+      if (
+        typeof MediaRecorder === "undefined" ||
+        !HTMLCanvasElement.prototype.captureStream
+      ) {
         throw new Error(
           "Export is not supported in this browser. Please try Chrome desktop.",
         );
       }
-      const { FFmpeg } = await import("@ffmpeg/ffmpeg");
-      const { fetchFile, toBlobURL } = await import("@ffmpeg/util");
-      const ffmpeg = new FFmpeg();
-      ffmpeg.on("progress", ({ progress }) => {
-        if (isFinite(progress)) setExportProgress(Math.min(1, Math.max(0, progress)));
-      });
-      ffmpeg.on("log", ({ message }) => {
-        console.log("[ffmpeg]", message);
-      });
 
-      // Single-threaded core (works without cross-origin isolation).
-      const coreVersion = "0.12.10";
-      const ffmpegVersion = "0.12.15";
-      const coreBase = `https://unpkg.com/@ffmpeg/core@${coreVersion}/dist/umd`;
-      const ffmpegBase = `https://unpkg.com/@ffmpeg/ffmpeg@${ffmpegVersion}/dist/umd`;
-
-      const [coreURL, wasmURL, classWorkerURL] = await Promise.all([
-        toBlobURL(`${coreBase}/ffmpeg-core.js`, "text/javascript"),
-        toBlobURL(`${coreBase}/ffmpeg-core.wasm`, "application/wasm"),
-        toBlobURL(`${ffmpegBase}/814.ffmpeg.js`, "text/javascript"),
+      await Promise.all([
+        new Promise<void>((res, rej) => {
+          tVid.onloadedmetadata = () => res();
+          tVid.onerror = () => rej(new Error("Failed to load teacher video"));
+        }),
+        new Promise<void>((res, rej) => {
+          sVid.onloadedmetadata = () => res();
+          sVid.onerror = () => rej(new Error("Failed to load student video"));
+        }),
       ]);
 
-      await ffmpeg.load({ coreURL, wasmURL, classWorkerURL });
+      const tStart = offset > 0 ? offset : 0;
+      const sStart = offset < 0 ? -offset : 0;
+      const tDur = Math.max(0, tVid.duration - tStart);
+      const sDur = Math.max(0, sVid.duration - sStart);
+      const totalDur = Math.min(tDur, sDur);
+      if (!isFinite(totalDur) || totalDur <= 0) {
+        throw new Error("Videos do not overlap with the current sync offset.");
+      }
 
-      setExportMsg("Preparing videos…");
-      await ffmpeg.writeFile("teacher.mp4", await fetchFile(teacherFile.current));
-      await ffmpeg.writeFile("student.mp4", await fetchFile(studentFile.current));
+      tVid.currentTime = tStart;
+      sVid.currentTime = sStart;
+      await Promise.all([
+        new Promise<void>((res) => {
+          tVid.onseeked = () => res();
+        }),
+        new Promise<void>((res) => {
+          sVid.onseeked = () => res();
+        }),
+      ]);
 
-      // Sync logic:
-      //   offset > 0 → student starts `offset`s later than teacher → trim teacher start.
-      //   offset < 0 → student starts earlier → trim student start.
-      const teacherTrim = offset > 0 ? offset : 0;
-      const studentTrim = offset < 0 ? -offset : 0;
+      const cellW = 640;
+      const cellH = 360;
+      const canvas = document.createElement("canvas");
+      canvas.width = cellW * 2;
+      canvas.height = cellH;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas 2D context unavailable");
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      setExportMsg("Rendering side-by-side video…");
-      const args = [
-        "-ss",
-        teacherTrim.toString(),
-        "-i",
-        "teacher.mp4",
-        "-ss",
-        studentTrim.toString(),
-        "-i",
-        "student.mp4",
-        "-filter_complex",
-        "[0:v]scale=640:360:force_original_aspect_ratio=decrease,pad=640:360:(ow-iw)/2:(oh-ih)/2,setsar=1[l];[1:v]scale=640:360:force_original_aspect_ratio=decrease,pad=640:360:(ow-iw)/2:(oh-ih)/2,setsar=1[r];[l][r]hstack=inputs=2[v]",
-        "-map",
-        "[v]",
-        "-map",
-        "0:a?",
-        "-c:v",
-        "libx264",
-        "-preset",
-        "ultrafast",
-        "-crf",
-        "26",
-        "-c:a",
-        "aac",
-        "-shortest",
-        "out.mp4",
+      const drawFitted = (
+        v: HTMLVideoElement,
+        x: number,
+        y: number,
+        w: number,
+        h: number,
+      ) => {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(x, y, w, h);
+        if (!v.videoWidth || !v.videoHeight) return;
+        const scale = Math.min(w / v.videoWidth, h / v.videoHeight);
+        const dw = v.videoWidth * scale;
+        const dh = v.videoHeight * scale;
+        const dx = x + (w - dw) / 2;
+        const dy = y + (h - dh) / 2;
+        ctx.drawImage(v, dx, dy, dw, dh);
+      };
+
+      const fps = 30;
+      const stream = canvas.captureStream(fps);
+
+      try {
+        const AC: typeof AudioContext =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext })
+            .webkitAudioContext;
+        if (AC) {
+          const ac = new AC();
+          const src = ac.createMediaElementSource(tVid);
+          const dest = ac.createMediaStreamDestination();
+          src.connect(dest);
+          dest.stream.getAudioTracks().forEach((tr) => stream.addTrack(tr));
+        }
+      } catch (err) {
+        console.warn("[export] audio capture skipped", err);
+      }
+
+      const mimeCandidates = [
+        "video/webm;codecs=vp9,opus",
+        "video/webm;codecs=vp8,opus",
+        "video/webm",
       ];
-      await ffmpeg.exec(args);
-      const data = (await ffmpeg.readFile("out.mp4")) as Uint8Array;
-      const blob = new Blob([data.buffer as ArrayBuffer], { type: "video/mp4" });
+      const mimeType =
+        mimeCandidates.find((m) => MediaRecorder.isTypeSupported(m)) || "";
+      const recorder = new MediaRecorder(
+        stream,
+        mimeType ? { mimeType } : undefined,
+      );
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+
+      setExportMsg("Recording side-by-side video…");
+
+      const stopped = new Promise<void>((res) => {
+        recorder.onstop = () => res();
+      });
+
+      recorder.start(250);
+      await Promise.all([tVid.play(), sVid.play()]);
+
+      const startWall = performance.now();
+      let stopping = false;
+
+      await new Promise<void>((resolve) => {
+        const tick = () => {
+          drawFitted(tVid, 0, 0, cellW, cellH);
+          drawFitted(sVid, cellW, 0, cellW, cellH);
+          const elapsed = (performance.now() - startWall) / 1000;
+          const progress = Math.min(1, elapsed / totalDur);
+          setExportProgress(progress);
+          if (!stopping && (elapsed >= totalDur || tVid.ended || sVid.ended)) {
+            stopping = true;
+            tVid.pause();
+            sVid.pause();
+            try {
+              recorder.stop();
+            } catch (err) {
+              console.warn("[export] recorder.stop failed", err);
+            }
+            resolve();
+            return;
+          }
+          requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      });
+
+      await stopped;
+
+      const blob = new Blob(chunks, { type: mimeType || "video/webm" });
       const url = URL.createObjectURL(blob);
       setExportUrl(url);
       setExportProgress(1);
