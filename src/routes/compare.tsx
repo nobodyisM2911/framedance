@@ -433,10 +433,10 @@ function ComparePage() {
                 {exportUrl && (
                   <a
                     href={exportUrl}
-                    download="comparison.mp4"
+                    download="comparison.webm"
                     className="text-xs underline underline-offset-4 hover:text-foreground"
                   >
-                    Download comparison.mp4
+                    Download comparison.webm
                   </a>
                 )}
               </div>
