@@ -485,6 +485,7 @@ function VideoSlot({
   onFile: (f: File) => void;
   videoRef: React.RefObject<HTMLVideoElement | null>;
 }) {
+  const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   return (
     <div className="space-y-2">
@@ -497,7 +498,7 @@ function VideoSlot({
             onClick={() => inputRef.current?.click()}
             className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
           >
-            Replace
+            {t("compare.replace")}
           </button>
         )}
       </div>
@@ -532,9 +533,9 @@ function VideoSlot({
           className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border bg-card text-center text-sm text-muted-foreground hover:border-foreground/40 hover:text-foreground"
         >
           <span className="font-serif text-xl text-foreground">
-            Upload {label.toLowerCase()} video
+            {t("compare.uploadLabel", { label })}
           </span>
-          <span className="text-xs">Click or drop a file</span>
+          <span className="text-xs">{t("compare.uploadHint")}</span>
         </button>
       )}
     </div>
