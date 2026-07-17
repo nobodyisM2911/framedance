@@ -487,13 +487,13 @@ function Index() {
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <p className="text-[11px] tracking-[0.12em] text-muted-foreground">
-            Built by M2911
+            {t("footer.builtBy")}
           </p>
           <button
             onClick={() => setSupportOpen(true)}
             className="text-[11px] tracking-[0.12em] text-muted-foreground transition hover:text-foreground"
           >
-            🍋 请这个做出好工具的人喝杯柠檬水（¥2）
+            {t("footer.support")}
           </button>
         </div>
       </footer>
@@ -502,25 +502,25 @@ function Index() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-center font-serif text-base tracking-tight">
-              For dancers.
+              {t("support.title1")}
               <br />
-              By a dancer.
+              {t("support.title2")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2 text-center">
             <p className="text-2xl">🍋</p>
             <p className="font-serif text-base tracking-tight">
-              请这个做出好工具的人喝杯柠檬水
+              {t("support.headline")}
             </p>
             <p className="font-mono text-sm text-muted-foreground">¥2</p>
             <div className="flex flex-col items-center gap-2 pt-1">
               <img
                 src={alipayQr.url}
-                alt="Alipay QR ¥2"
+                alt={t("support.qrAlt")}
                 className="w-48 h-auto rounded-md border border-border"
               />
               <p className="text-[11px] text-muted-foreground">
-                支付宝扫码支持 ¥2
+                {t("support.qrHint")}
               </p>
             </div>
             <div className="flex items-center justify-center gap-2 pt-1">
@@ -529,24 +529,24 @@ function Index() {
                 download="alipay-qr.jpg"
                 className="text-[11px] px-3 py-1 rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
               >
-                保存二维码
+                {t("support.saveQr")}
               </a>
               <button
                 type="button"
                 onClick={() => {
                   setSupportOpen(false);
-                  toast("谢谢你请我喝柠檬水 🍋");
+                  toast(t("support.toast"));
                 }}
                 className="text-[11px] px-3 py-1 rounded text-muted-foreground hover:text-foreground transition-colors"
               >
-                我已请你喝柠檬水 🍋
+                {t("support.paid")}
               </button>
             </div>
             <p className="text-xs text-muted-foreground pt-2">
-              感谢支持这个项目。
+              {t("support.thanks")}
             </p>
             <p className="text-[11px] tracking-[0.12em] text-muted-foreground">
-              — M2911
+              {t("support.signature")}
             </p>
           </div>
         </DialogContent>
