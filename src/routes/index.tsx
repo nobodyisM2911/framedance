@@ -26,11 +26,12 @@ import { LyricsPanel } from "@/components/LyricsPanel";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import alipayQr from "@/assets/alipay-qr.jpg.asset.json";
+import { LanguageSwitcher, useI18n } from "@/lib/i18n";
 
-const SENSITIVITY_LEVELS: { value: Sensitivity; label: string }[] = [
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High" },
+const SENSITIVITY_LEVELS: { value: Sensitivity; labelKey: string }[] = [
+  { value: "low", labelKey: "sensitivity.low" },
+  { value: "medium", labelKey: "sensitivity.medium" },
+  { value: "high", labelKey: "sensitivity.high" },
 ];
 
 const PLAYBACK_SPEEDS = [0.5, 0.8, 1, 1.2];
