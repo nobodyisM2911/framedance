@@ -51,6 +51,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  const { t } = useI18n();
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileRef = useRef<File | null>(null);
 
