@@ -257,16 +257,19 @@ function Index() {
             <h1 className="font-serif text-[1.75rem] font-normal leading-none tracking-normal">Stillframe</h1>
             <nav className="flex gap-6 text-[0.7rem] uppercase tracking-[0.28em] text-muted-foreground">
               <Link to="/" className="text-foreground">
-                Practice
+                {t("nav.practice")}
               </Link>
               <Link to="/compare" className="hover:text-foreground">
-                Compare
+                {t("nav.compare")}
               </Link>
             </nav>
           </div>
-          <p className="text-[0.7rem] uppercase tracking-[0.28em] text-muted-foreground">
-            Dance practice
-          </p>
+          <div className="flex items-center gap-5">
+            <p className="text-[0.7rem] uppercase tracking-[0.28em] text-muted-foreground">
+              {t("tag.dancePractice")}
+            </p>
+            <LanguageSwitcher />
+          </div>
         </div>
       </header>
 
