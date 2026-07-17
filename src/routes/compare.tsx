@@ -136,7 +136,7 @@ function ComparePage() {
     if (!tFile || !sFile) return;
     setExporting(true);
     setExportProgress(0);
-    setExportMsg("Preparing videos…");
+    setExportMsg(t("compare.msg.preparing"));
     if (exportUrl) {
       URL.revokeObjectURL(exportUrl);
       setExportUrl(null);
@@ -165,9 +165,7 @@ function ComparePage() {
         typeof MediaRecorder === "undefined" ||
         !HTMLCanvasElement.prototype.captureStream
       ) {
-        throw new Error(
-          "Export is not supported in this browser. Please try Chrome desktop.",
-        );
+        throw new Error(t("compare.msg.unsupported"));
       }
 
       await Promise.all([
