@@ -599,6 +599,7 @@ function RangeControl({
 }
 
 function Uploader({ onFile }: { onFile: (file: File) => void }) {
+  const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   return (
     <div
@@ -611,11 +612,10 @@ function Uploader({ onFile }: { onFile: (file: File) => void }) {
       }}
     >
       <h2 className="font-serif text-4xl font-normal leading-[1.15] tracking-normal md:text-5xl">
-        Study your dance, frame by frame.
+        {t("hero.title")}
       </h2>
       <p className="mt-2 max-w-lg text-sm leading-relaxed text-muted-foreground">
-        Upload a video. We&rsquo;ll find the still moments — the shapes
-        between motion — and lay them out for you to scrub through.
+        {t("hero.subtitle")}
       </p>
       <input
         ref={inputRef}
@@ -628,9 +628,9 @@ function Uploader({ onFile }: { onFile: (file: File) => void }) {
         }}
       />
       <Button className="mt-4" onClick={() => inputRef.current?.click()}>
-        Choose a video
+        {t("hero.choose")}
       </Button>
-      <p className="text-xs text-muted-foreground">or drop a file here</p>
+      <p className="text-xs text-muted-foreground">{t("hero.orDrop")}</p>
     </div>
   );
 }
@@ -648,6 +648,7 @@ function PoseCard({
   onJump: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="group relative shrink-0">
       <button
@@ -660,7 +661,7 @@ function PoseCard({
       >
         <img
           src={pose.thumbnail}
-          alt={`Pose at ${formatTime(pose.time)}`}
+          alt={t("poses.altAt", { time: formatTime(pose.time) })}
           className="h-28 w-auto"
           style={{ transform: mirrored ? "scaleX(-1)" : undefined }}
         />
@@ -670,7 +671,7 @@ function PoseCard({
       </button>
       <button
         onClick={onDelete}
-        aria-label="Delete pose"
+        aria-label={t("poses.deleteAria")}
         className="absolute right-1 top-1 hidden h-6 w-6 items-center justify-center rounded-full bg-background/90 text-xs text-foreground shadow-sm group-hover:flex"
       >
         ×
