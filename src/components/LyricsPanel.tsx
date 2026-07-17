@@ -120,7 +120,7 @@ export function LyricsPanel({
     <div className="flex h-full flex-col rounded-md border border-border bg-card">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
         <h3 className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-          Lyrics
+          {t("lyrics.title")}
         </h3>
         <div className="flex items-center gap-3">
           {lyrics.length > 0 && (
@@ -128,7 +128,7 @@ export function LyricsPanel({
               onClick={() => setEditing((v) => !v)}
               className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
             >
-              {editing ? "Done" : "Edit"}
+              {editing ? t("lyrics.done") : t("lyrics.edit")}
             </button>
           )}
           {lyrics.length > 0 && (
@@ -139,25 +139,24 @@ export function LyricsPanel({
               }}
               className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
             >
-              Clear
+              {t("lyrics.clear")}
             </button>
           )}
         </div>
       </div>
 
-      {/* Auto-detect controls */}
       <div className="space-y-2 border-b border-border px-3 py-3">
         <div className="grid grid-cols-2 gap-2">
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Song title"
+            placeholder={t("lyrics.songTitle")}
             className="rounded border border-border bg-background px-2 py-1 text-xs"
           />
           <input
             value={artist}
             onChange={(e) => setArtist(e.target.value)}
-            placeholder="Artist"
+            placeholder={t("lyrics.artist")}
             className="rounded border border-border bg-background px-2 py-1 text-xs"
           />
         </div>
@@ -167,25 +166,23 @@ export function LyricsPanel({
             disabled={status.kind === "searching"}
             className="rounded-md bg-foreground px-2.5 py-1 text-[11px] uppercase tracking-[0.18em] text-background disabled:opacity-50"
           >
-            {status.kind === "searching" ? "Searching…" : "Find lyrics"}
+            {status.kind === "searching" ? t("lyrics.searching") : t("lyrics.find")}
           </button>
           <button
             onClick={handleTranscribe}
             disabled={!audioFile || status.kind === "transcribing"}
-            title="Speech-to-text fallback (requires STT provider)"
             className="rounded-md border border-border px-2.5 py-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground disabled:opacity-50"
           >
-            {status.kind === "transcribing" ? "Transcribing…" : "Transcribe audio"}
+            {status.kind === "transcribing" ? t("lyrics.transcribing") : t("lyrics.transcribe")}
           </button>
         </div>
         {status.kind !== "idle" && (
           <p className="text-[11px] text-muted-foreground">
             {status.kind === "found" && status.message}
-            {status.kind === "not_found" &&
-              "No lyrics found. Try a different spelling, transcribe, or upload a .lrc."}
+            {status.kind === "not_found" && t("lyrics.notFound")}
             {status.kind === "error" && status.message}
-            {status.kind === "searching" && "Searching LRCLIB…"}
-            {status.kind === "transcribing" && "Transcribing audio…"}
+            {status.kind === "searching" && t("lyrics.msgSearching")}
+            {status.kind === "transcribing" && t("lyrics.msgTranscribing")}
           </p>
         )}
 
@@ -193,7 +190,7 @@ export function LyricsPanel({
           onClick={() => setAdvancedOpen((v) => !v)}
           className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
         >
-          {advancedOpen ? "− Advanced" : "+ Advanced"}
+          {advancedOpen ? t("lyrics.advancedOpen") : t("lyrics.advancedClosed")}
         </button>
         {advancedOpen && (
           <div className="flex items-center gap-2">
@@ -212,7 +209,7 @@ export function LyricsPanel({
               onClick={() => fileRef.current?.click()}
               className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
             >
-              Upload .lrc fallback
+              {t("lyrics.uploadFallback")}
             </button>
           </div>
         )}
@@ -225,8 +222,7 @@ export function LyricsPanel({
       >
         {lyrics.length === 0 ? (
           <p className="px-2 py-6 text-center text-xs text-muted-foreground">
-            Enter the song title and artist above to auto-detect synced lyrics.
-            Beat and pose timelines still work without lyrics.
+            {t("lyrics.empty")}
           </p>
         ) : editing ? (
           <div className="space-y-1.5">
@@ -249,7 +245,7 @@ export function LyricsPanel({
                 <button
                   onClick={() => removeLine(i)}
                   className="text-[11px] text-muted-foreground hover:text-foreground"
-                  aria-label="Remove line"
+                  aria-label={t("lyrics.removeAria")}
                 >
                   ×
                 </button>
@@ -259,7 +255,7 @@ export function LyricsPanel({
               onClick={addLine}
               className="mt-2 w-full rounded border border-dashed border-border py-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
             >
-              + Add line at {currentTime.toFixed(2)}s
+              {t("lyrics.addLineAt", { t: currentTime.toFixed(2) })}
             </button>
           </div>
         ) : (
