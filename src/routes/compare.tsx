@@ -185,7 +185,7 @@ function ComparePage() {
       const sDur = Math.max(0, sVid.duration - sStart);
       const totalDur = Math.min(tDur, sDur);
       if (!isFinite(totalDur) || totalDur <= 0) {
-        throw new Error("Videos do not overlap with the current sync offset.");
+        throw new Error(t("compare.msg.noOverlap"));
       }
 
       tVid.currentTime = tStart;
@@ -272,7 +272,7 @@ function ComparePage() {
         if (e.data.size > 0) chunks.push(e.data);
       };
 
-      setExportMsg("Recording side-by-side video…");
+      setExportMsg(t("compare.msg.recording"));
 
       const stopped = new Promise<void>((res) => {
         recorder.onstop = () => res();
@@ -314,16 +314,18 @@ function ComparePage() {
       const url = URL.createObjectURL(blob);
       setExportUrl(url);
       setExportProgress(1);
-      setExportMsg("Export complete");
+      setExportMsg(t("compare.msg.complete"));
     } catch (e) {
       console.error("[export] failed", e);
       setExportMsg(
-        `Export failed: ${e instanceof Error ? e.message : String(e)}`,
+        t("compare.msg.failed", {
+          msg: e instanceof Error ? e.message : String(e),
+        }),
       );
     } finally {
       setExporting(false);
     }
-  }, [offset, exportUrl]);
+  }, [offset, exportUrl, t]);
 
 
   const both = teacherUrl && studentUrl;
