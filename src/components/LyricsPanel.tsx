@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { currentLyricIndex, parseLrc, type LyricLine } from "@/lib/lrc-parser";
 import { findLyrics, transcribeAudio } from "@/lib/lyrics-provider";
+import { useI18n } from "@/lib/i18n";
 
 export type LyricsPanelProps = {
   lyrics: LyricLine[];
@@ -29,6 +30,7 @@ export function LyricsPanel({
   onChange,
   onSeek,
 }: LyricsPanelProps) {
+  const { t } = useI18n();
   const fileRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [title, setTitle] = useState("");
