@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@lovable.dev/mcp-js": "^0.23.0",
     "@mediapipe/tasks-vision": "^0.10.35",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -65,7 +66,7 @@
     "vaul": "^1.1.2",
     "vite-tsconfig-paths": "^6.0.2",
     "web-audio-beat-detector": "^8.2.36",
-    "zod": "^3.24.2"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
