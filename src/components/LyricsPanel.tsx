@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { currentLyricIndex, parseLrc, type LyricLine } from "@/lib/lrc-parser";
 import { findLyrics, transcribeAudio } from "@/lib/lyrics-provider";
+import { useI18n } from "@/lib/i18n";
 
 export type LyricsPanelProps = {
   lyrics: LyricLine[];
@@ -29,6 +30,7 @@ export function LyricsPanel({
   onChange,
   onSeek,
 }: LyricsPanelProps) {
+  const { t } = useI18n();
   const fileRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [title, setTitle] = useState("");
@@ -49,7 +51,7 @@ export function LyricsPanel({
 
   const handleSearch = async () => {
     if (!title.trim() || !artist.trim()) {
-      setStatus({ kind: "error", message: "Enter song title and artist." });
+      setStatus({ kind: "error", message: t("lyrics.enterInputs") });
       return;
     }
     setStatus({ kind: "searching" });
@@ -59,18 +61,14 @@ export function LyricsPanel({
         onChange(r.lines);
         setStatus({
           kind: "found",
-          message: `Synced lyrics from LRCLIB · ${r.meta.artistName} — ${r.meta.trackName}`,
+          message: t("lyrics.foundSynced", { artist: r.meta.artistName, track: r.meta.trackName }),
         });
       } else if (r.status === "plain") {
-        // Distribute plain lines evenly across the track as a starting point.
         const split = r.text.split(/\r?\n/).filter((l) => l.trim());
         const total = Math.max(duration ?? 0, 1);
         const step = total / Math.max(split.length, 1);
         onChange(split.map((text, i) => ({ time: i * step, text })));
-        setStatus({
-          kind: "found",
-          message: "Plain lyrics found · timings estimated, edit to refine.",
-        });
+        setStatus({ kind: "found", message: t("lyrics.foundPlain") });
       } else {
         setStatus({ kind: "not_found" });
       }
@@ -88,14 +86,11 @@ export function LyricsPanel({
     try {
       const lines = await transcribeAudio(audioFile);
       onChange(lines);
-      setStatus({ kind: "found", message: "Transcribed from audio." });
+      setStatus({ kind: "found", message: t("lyrics.transcribed") });
     } catch (e) {
       setStatus({
         kind: "error",
-        message:
-          e instanceof Error
-            ? e.message
-            : "Transcription unavailable. Use search or upload a .lrc.",
+        message: e instanceof Error ? e.message : t("lyrics.transcribeError"),
       });
     }
   };
@@ -103,7 +98,7 @@ export function LyricsPanel({
   const handleUpload = async (f: File) => {
     const text = await f.text();
     onChange(parseLrc(text));
-    setStatus({ kind: "found", message: `Loaded ${f.name}` });
+    setStatus({ kind: "found", message: t("lyrics.loaded", { name: f.name }) });
   };
 
   const updateLine = (i: number, patch: Partial<LyricLine>) => {
@@ -125,7 +120,7 @@ export function LyricsPanel({
     <div className="flex h-full flex-col rounded-md border border-border bg-card">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
         <h3 className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-          Lyrics
+          {t("lyrics.title")}
         </h3>
         <div className="flex items-center gap-3">
           {lyrics.length > 0 && (
@@ -133,7 +128,7 @@ export function LyricsPanel({
               onClick={() => setEditing((v) => !v)}
               className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
             >
-              {editing ? "Done" : "Edit"}
+              {editing ? t("lyrics.done") : t("lyrics.edit")}
             </button>
           )}
           {lyrics.length > 0 && (
@@ -144,25 +139,24 @@ export function LyricsPanel({
               }}
               className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
             >
-              Clear
+              {t("lyrics.clear")}
             </button>
           )}
         </div>
       </div>
 
-      {/* Auto-detect controls */}
       <div className="space-y-2 border-b border-border px-3 py-3">
         <div className="grid grid-cols-2 gap-2">
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Song title"
+            placeholder={t("lyrics.songTitle")}
             className="rounded border border-border bg-background px-2 py-1 text-xs"
           />
           <input
             value={artist}
             onChange={(e) => setArtist(e.target.value)}
-            placeholder="Artist"
+            placeholder={t("lyrics.artist")}
             className="rounded border border-border bg-background px-2 py-1 text-xs"
           />
         </div>
@@ -172,25 +166,23 @@ export function LyricsPanel({
             disabled={status.kind === "searching"}
             className="rounded-md bg-foreground px-2.5 py-1 text-[11px] uppercase tracking-[0.18em] text-background disabled:opacity-50"
           >
-            {status.kind === "searching" ? "Searching…" : "Find lyrics"}
+            {status.kind === "searching" ? t("lyrics.searching") : t("lyrics.find")}
           </button>
           <button
             onClick={handleTranscribe}
             disabled={!audioFile || status.kind === "transcribing"}
-            title="Speech-to-text fallback (requires STT provider)"
             className="rounded-md border border-border px-2.5 py-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground disabled:opacity-50"
           >
-            {status.kind === "transcribing" ? "Transcribing…" : "Transcribe audio"}
+            {status.kind === "transcribing" ? t("lyrics.transcribing") : t("lyrics.transcribe")}
           </button>
         </div>
         {status.kind !== "idle" && (
           <p className="text-[11px] text-muted-foreground">
             {status.kind === "found" && status.message}
-            {status.kind === "not_found" &&
-              "No lyrics found. Try a different spelling, transcribe, or upload a .lrc."}
+            {status.kind === "not_found" && t("lyrics.notFound")}
             {status.kind === "error" && status.message}
-            {status.kind === "searching" && "Searching LRCLIB…"}
-            {status.kind === "transcribing" && "Transcribing audio…"}
+            {status.kind === "searching" && t("lyrics.msgSearching")}
+            {status.kind === "transcribing" && t("lyrics.msgTranscribing")}
           </p>
         )}
 
@@ -198,7 +190,7 @@ export function LyricsPanel({
           onClick={() => setAdvancedOpen((v) => !v)}
           className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
         >
-          {advancedOpen ? "− Advanced" : "+ Advanced"}
+          {advancedOpen ? t("lyrics.advancedOpen") : t("lyrics.advancedClosed")}
         </button>
         {advancedOpen && (
           <div className="flex items-center gap-2">
@@ -217,7 +209,7 @@ export function LyricsPanel({
               onClick={() => fileRef.current?.click()}
               className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
             >
-              Upload .lrc fallback
+              {t("lyrics.uploadFallback")}
             </button>
           </div>
         )}
@@ -230,8 +222,7 @@ export function LyricsPanel({
       >
         {lyrics.length === 0 ? (
           <p className="px-2 py-6 text-center text-xs text-muted-foreground">
-            Enter the song title and artist above to auto-detect synced lyrics.
-            Beat and pose timelines still work without lyrics.
+            {t("lyrics.empty")}
           </p>
         ) : editing ? (
           <div className="space-y-1.5">
@@ -254,7 +245,7 @@ export function LyricsPanel({
                 <button
                   onClick={() => removeLine(i)}
                   className="text-[11px] text-muted-foreground hover:text-foreground"
-                  aria-label="Remove line"
+                  aria-label={t("lyrics.removeAria")}
                 >
                   ×
                 </button>
@@ -264,7 +255,7 @@ export function LyricsPanel({
               onClick={addLine}
               className="mt-2 w-full rounded border border-dashed border-border py-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
             >
-              + Add line at {currentTime.toFixed(2)}s
+              {t("lyrics.addLineAt", { t: currentTime.toFixed(2) })}
             </button>
           </div>
         ) : (

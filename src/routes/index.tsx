@@ -26,11 +26,12 @@ import { LyricsPanel } from "@/components/LyricsPanel";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import alipayQr from "@/assets/alipay-qr.jpg.asset.json";
+import { LanguageSwitcher, useI18n } from "@/lib/i18n";
 
-const SENSITIVITY_LEVELS: { value: Sensitivity; label: string }[] = [
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High" },
+const SENSITIVITY_LEVELS: { value: Sensitivity; labelKey: string }[] = [
+  { value: "low", labelKey: "sensitivity.low" },
+  { value: "medium", labelKey: "sensitivity.medium" },
+  { value: "high", labelKey: "sensitivity.high" },
 ];
 
 const PLAYBACK_SPEEDS = [0.5, 0.8, 1, 1.2];
@@ -50,6 +51,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  const { t } = useI18n();
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileRef = useRef<File | null>(null);
 
@@ -255,16 +257,19 @@ function Index() {
             <h1 className="font-serif text-[1.75rem] font-normal leading-none tracking-normal">Stillframe</h1>
             <nav className="flex gap-6 text-[0.7rem] uppercase tracking-[0.28em] text-muted-foreground">
               <Link to="/" className="text-foreground">
-                Practice
+                {t("nav.practice")}
               </Link>
               <Link to="/compare" className="hover:text-foreground">
-                Compare
+                {t("nav.compare")}
               </Link>
             </nav>
           </div>
-          <p className="text-[0.7rem] uppercase tracking-[0.28em] text-muted-foreground">
-            Dance practice
-          </p>
+          <div className="flex items-center gap-5">
+            <p className="text-[0.7rem] uppercase tracking-[0.28em] text-muted-foreground">
+              {t("tag.dancePractice")}
+            </p>
+            <LanguageSwitcher />
+          </div>
         </div>
       </header>
 
@@ -303,11 +308,17 @@ function Index() {
             <section className="space-y-3">
               <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                  <h2 className="font-serif text-lg">Rhythm</h2>
+                  <h2 className="font-serif text-lg">{t("rhythm.title")}</h2>
                   <p className="text-xs text-muted-foreground">
                     {audio
-                      ? `${audio.bpm.toFixed(1)} BPM · ${adjustedBeats.beats.length} beats · ${audio.accents.length} accents · ${audio.peaks.length} peaks · ${audio.drops.length} drops`
-                      : "Detect BPM, beats, accents, and energy peaks."}
+                      ? t("rhythm.stats", {
+                          bpm: audio.bpm.toFixed(1),
+                          beats: adjustedBeats.beats.length,
+                          accents: audio.accents.length,
+                          peaks: audio.peaks.length,
+                          drops: audio.drops.length,
+                        })
+                      : t("rhythm.empty")}
                   </p>
                 </div>
                 <Button
@@ -316,10 +327,10 @@ function Index() {
                   disabled={analyzingAudio}
                 >
                   {analyzingAudio
-                    ? "Analyzing audio…"
+                    ? t("rhythm.analyzing")
                     : audio
-                      ? "Re-analyze audio"
-                      : "Analyze audio"}
+                      ? t("rhythm.reanalyze")
+                      : t("rhythm.analyze")}
                 </Button>
               </div>
 
@@ -327,7 +338,7 @@ function Index() {
                 <>
                   <div className="grid gap-4 md:grid-cols-2">
                     <RangeControl
-                      label="First count"
+                      label={t("rhythm.firstCount")}
                       value={firstCount}
                       min={0}
                       max={Math.min(8, audio.duration)}
@@ -336,7 +347,7 @@ function Index() {
                       onChange={setFirstCount}
                     />
                     <RangeControl
-                      label="Beat offset"
+                      label={t("rhythm.beatOffset")}
                       value={beatOffset}
                       min={-0.5}
                       max={0.5}
@@ -363,7 +374,7 @@ function Index() {
             <section className="flex flex-wrap items-end gap-x-8 gap-y-4">
               <div className="space-y-2">
                 <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                  Speed
+                  {t("controls.speed")}
                 </label>
                 <div className="inline-flex rounded-md border border-border bg-card p-0.5">
                   {PLAYBACK_SPEEDS.map((s) => (
@@ -384,7 +395,7 @@ function Index() {
 
               <div className="space-y-2">
                 <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                  View
+                  {t("controls.view")}
                 </label>
                 <button
                   onClick={toggleMirror}
@@ -394,13 +405,13 @@ function Index() {
                       : "border-border bg-card text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  Mirror
+                  {t("controls.mirror")}
                 </button>
               </div>
 
               <div className="space-y-2">
                 <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                  Sensitivity
+                  {t("controls.sensitivity")}
                 </label>
                 <div className="inline-flex rounded-md border border-border bg-card p-0.5">
                   {SENSITIVITY_LEVELS.map((s) => (
@@ -414,7 +425,7 @@ function Index() {
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      {s.label}
+                      {t(s.labelKey)}
                     </button>
                   ))}
                 </div>
@@ -426,28 +437,30 @@ function Index() {
                   onClick={addCurrent}
                   disabled={analyzing}
                 >
-                  Mark frame
+                  {t("actions.markFrame")}
                 </Button>
                 <Button onClick={runAnalysis} disabled={analyzing}>
                   {analyzing
-                    ? `Analyzing ${Math.round(progress * 100)}%`
+                    ? t("actions.analyzingProgress", { pct: Math.round(progress * 100) })
                     : poses.length
-                      ? "Re-analyze"
-                      : "Detect poses"}
+                      ? t("actions.reanalyzePoses")
+                      : t("actions.detectPoses")}
                 </Button>
               </div>
             </section>
 
             <section>
               <div className="mb-3 flex items-baseline justify-between">
-                <h2 className="font-serif text-lg">Poses</h2>
+                <h2 className="font-serif text-lg">{t("poses.title")}</h2>
                 <span className="text-xs text-muted-foreground">
-                  {poses.length} {poses.length === 1 ? "frame" : "frames"}
+                  {poses.length === 1
+                    ? t("poses.frame", { n: poses.length })
+                    : t("poses.frames", { n: poses.length })}
                 </span>
               </div>
               {poses.length === 0 ? (
                 <p className="rounded-md border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
-                  No poses yet. Run detection or mark a frame manually.
+                  {t("poses.empty")}
                 </p>
               ) : (
                 <div className="flex gap-3 overflow-x-auto pb-2">
@@ -464,8 +477,7 @@ function Index() {
                 </div>
               )}
               <p className="mt-4 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                Space play · M mirror · A add · Del remove · drag ◆ on timeline
-                to refine timing
+                {t("poses.shortcuts")}
               </p>
             </section>
           </div>
@@ -475,13 +487,13 @@ function Index() {
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <p className="text-[11px] tracking-[0.12em] text-muted-foreground">
-            Built by M2911
+            {t("footer.builtBy")}
           </p>
           <button
             onClick={() => setSupportOpen(true)}
             className="text-[11px] tracking-[0.12em] text-muted-foreground transition hover:text-foreground"
           >
-            🍋 请这个做出好工具的人喝杯柠檬水（¥2）
+            {t("footer.support")}
           </button>
         </div>
       </footer>
@@ -490,25 +502,25 @@ function Index() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-center font-serif text-base tracking-tight">
-              For dancers.
+              {t("support.title1")}
               <br />
-              By a dancer.
+              {t("support.title2")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2 text-center">
             <p className="text-2xl">🍋</p>
             <p className="font-serif text-base tracking-tight">
-              请这个做出好工具的人喝杯柠檬水
+              {t("support.headline")}
             </p>
             <p className="font-mono text-sm text-muted-foreground">¥2</p>
             <div className="flex flex-col items-center gap-2 pt-1">
               <img
                 src={alipayQr.url}
-                alt="Alipay QR ¥2"
+                alt={t("support.qrAlt")}
                 className="w-48 h-auto rounded-md border border-border"
               />
               <p className="text-[11px] text-muted-foreground">
-                支付宝扫码支持 ¥2
+                {t("support.qrHint")}
               </p>
             </div>
             <div className="flex items-center justify-center gap-2 pt-1">
@@ -517,24 +529,24 @@ function Index() {
                 download="alipay-qr.jpg"
                 className="text-[11px] px-3 py-1 rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
               >
-                保存二维码
+                {t("support.saveQr")}
               </a>
               <button
                 type="button"
                 onClick={() => {
                   setSupportOpen(false);
-                  toast("谢谢你请我喝柠檬水 🍋");
+                  toast(t("support.toast"));
                 }}
                 className="text-[11px] px-3 py-1 rounded text-muted-foreground hover:text-foreground transition-colors"
               >
-                我已请你喝柠檬水 🍋
+                {t("support.paid")}
               </button>
             </div>
             <p className="text-xs text-muted-foreground pt-2">
-              感谢支持这个项目。
+              {t("support.thanks")}
             </p>
             <p className="text-[11px] tracking-[0.12em] text-muted-foreground">
-              — M2911
+              {t("support.signature")}
             </p>
           </div>
         </DialogContent>
@@ -587,6 +599,7 @@ function RangeControl({
 }
 
 function Uploader({ onFile }: { onFile: (file: File) => void }) {
+  const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   return (
     <div
@@ -599,11 +612,10 @@ function Uploader({ onFile }: { onFile: (file: File) => void }) {
       }}
     >
       <h2 className="font-serif text-4xl font-normal leading-[1.15] tracking-normal md:text-5xl">
-        Study your dance, frame by frame.
+        {t("hero.title")}
       </h2>
       <p className="mt-2 max-w-lg text-sm leading-relaxed text-muted-foreground">
-        Upload a video. We&rsquo;ll find the still moments — the shapes
-        between motion — and lay them out for you to scrub through.
+        {t("hero.subtitle")}
       </p>
       <input
         ref={inputRef}
@@ -616,9 +628,9 @@ function Uploader({ onFile }: { onFile: (file: File) => void }) {
         }}
       />
       <Button className="mt-4" onClick={() => inputRef.current?.click()}>
-        Choose a video
+        {t("hero.choose")}
       </Button>
-      <p className="text-xs text-muted-foreground">or drop a file here</p>
+      <p className="text-xs text-muted-foreground">{t("hero.orDrop")}</p>
     </div>
   );
 }
@@ -636,6 +648,7 @@ function PoseCard({
   onJump: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="group relative shrink-0">
       <button
@@ -648,7 +661,7 @@ function PoseCard({
       >
         <img
           src={pose.thumbnail}
-          alt={`Pose at ${formatTime(pose.time)}`}
+          alt={t("poses.altAt", { time: formatTime(pose.time) })}
           className="h-28 w-auto"
           style={{ transform: mirrored ? "scaleX(-1)" : undefined }}
         />
@@ -658,7 +671,7 @@ function PoseCard({
       </button>
       <button
         onClick={onDelete}
-        aria-label="Delete pose"
+        aria-label={t("poses.deleteAria")}
         className="absolute right-1 top-1 hidden h-6 w-6 items-center justify-center rounded-full bg-background/90 text-xs text-foreground shadow-sm group-hover:flex"
       >
         ×

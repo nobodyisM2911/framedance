@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { LanguageSwitcher, useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/compare")({
   head: () => ({
@@ -24,6 +25,7 @@ function fmt(t: number) {
 }
 
 function ComparePage() {
+  const { t } = useI18n();
   const teacherRef = useRef<HTMLVideoElement>(null);
   const studentRef = useRef<HTMLVideoElement>(null);
   const [teacherUrl, setTeacherUrl] = useState<string | null>(null);
@@ -134,7 +136,7 @@ function ComparePage() {
     if (!tFile || !sFile) return;
     setExporting(true);
     setExportProgress(0);
-    setExportMsg("Preparing videos…");
+    setExportMsg(t("compare.msg.preparing"));
     if (exportUrl) {
       URL.revokeObjectURL(exportUrl);
       setExportUrl(null);
@@ -163,9 +165,7 @@ function ComparePage() {
         typeof MediaRecorder === "undefined" ||
         !HTMLCanvasElement.prototype.captureStream
       ) {
-        throw new Error(
-          "Export is not supported in this browser. Please try Chrome desktop.",
-        );
+        throw new Error(t("compare.msg.unsupported"));
       }
 
       await Promise.all([
@@ -185,7 +185,7 @@ function ComparePage() {
       const sDur = Math.max(0, sVid.duration - sStart);
       const totalDur = Math.min(tDur, sDur);
       if (!isFinite(totalDur) || totalDur <= 0) {
-        throw new Error("Videos do not overlap with the current sync offset.");
+        throw new Error(t("compare.msg.noOverlap"));
       }
 
       tVid.currentTime = tStart;
@@ -272,7 +272,7 @@ function ComparePage() {
         if (e.data.size > 0) chunks.push(e.data);
       };
 
-      setExportMsg("Recording side-by-side video…");
+      setExportMsg(t("compare.msg.recording"));
 
       const stopped = new Promise<void>((res) => {
         recorder.onstop = () => res();
@@ -314,16 +314,18 @@ function ComparePage() {
       const url = URL.createObjectURL(blob);
       setExportUrl(url);
       setExportProgress(1);
-      setExportMsg("Export complete");
+      setExportMsg(t("compare.msg.complete"));
     } catch (e) {
       console.error("[export] failed", e);
       setExportMsg(
-        `Export failed: ${e instanceof Error ? e.message : String(e)}`,
+        t("compare.msg.failed", {
+          msg: e instanceof Error ? e.message : String(e),
+        }),
       );
     } finally {
       setExporting(false);
     }
-  }, [offset, exportUrl]);
+  }, [offset, exportUrl, t]);
 
 
   const both = teacherUrl && studentUrl;
@@ -338,33 +340,36 @@ function ComparePage() {
             </Link>
             <nav className="flex gap-6 text-[0.7rem] uppercase tracking-[0.28em] text-muted-foreground">
               <Link to="/" className="hover:text-foreground">
-                Practice
+                {t("nav.practice")}
               </Link>
               <Link
                 to="/compare"
                 className="text-foreground"
                 activeProps={{ className: "text-foreground" }}
               >
-                Compare
+                {t("nav.compare")}
               </Link>
             </nav>
           </div>
-          <p className="text-[0.7rem] uppercase tracking-[0.28em] text-muted-foreground">
-            Side by side
-          </p>
+          <div className="flex items-center gap-5">
+            <p className="text-[0.7rem] uppercase tracking-[0.28em] text-muted-foreground">
+              {t("tag.sideBySide")}
+            </p>
+            <LanguageSwitcher />
+          </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-6xl px-6 py-10 space-y-8">
         <div className="grid gap-4 md:grid-cols-2">
           <VideoSlot
-            label="Teacher"
+            label={t("compare.teacher")}
             url={teacherUrl}
             onFile={onTeacher}
             videoRef={teacherRef}
           />
           <VideoSlot
-            label="Student"
+            label={t("compare.student")}
             url={studentUrl}
             onFile={onStudent}
             videoRef={studentRef}
@@ -377,7 +382,7 @@ function ComparePage() {
               <div className="flex-1 min-w-[280px] space-y-2">
                 <div className="flex items-baseline justify-between">
                   <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                    Sync offset
+                    {t("compare.syncOffset")}
                   </label>
                   <span className="font-mono text-xs text-muted-foreground">
                     {offset >= 0 ? "+" : ""}
@@ -406,7 +411,7 @@ function ComparePage() {
                       }
                       className="rounded border border-border bg-card px-2 py-1 font-mono text-[11px] text-muted-foreground hover:text-foreground"
                     >
-                      {d === 0 ? "reset" : `${d > 0 ? "+" : ""}${d}s`}
+                      {d === 0 ? t("compare.reset") : `${d > 0 ? "+" : ""}${d}s`}
                     </button>
                   ))}
                 </div>
@@ -414,26 +419,26 @@ function ComparePage() {
 
               <div className="flex gap-2">
                 <Button variant="outline" onClick={restart}>
-                  Restart
+                  {t("compare.restart")}
                 </Button>
                 <Button onClick={togglePlay}>
-                  {playing ? "Pause both" : "Play both"}
+                  {playing ? t("compare.pauseBoth") : t("compare.playBoth")}
                 </Button>
               </div>
             </section>
 
             <section className="space-y-3">
               <div className="flex items-baseline justify-between">
-                <h2 className="font-serif text-lg">Export</h2>
+                <h2 className="font-serif text-lg">{t("compare.exportTitle")}</h2>
                 <span className="text-xs text-muted-foreground">
-                  Side-by-side WebM via Canvas + MediaRecorder
+                  {t("compare.exportSub")}
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <Button onClick={exportSideBySide} disabled={exporting}>
                   {exporting
-                    ? `Exporting ${Math.round(exportProgress * 100)}%`
-                    : "Export comparison"}
+                    ? t("compare.exporting", { pct: Math.round(exportProgress * 100) })
+                    : t("compare.export")}
                 </Button>
                 {exportMsg && (
                   <span className="text-xs text-muted-foreground">
@@ -446,7 +451,7 @@ function ComparePage() {
                     download="comparison.webm"
                     className="text-xs underline underline-offset-4 hover:text-foreground"
                   >
-                    Download comparison.webm
+                    {t("compare.download")}
                   </a>
                 )}
               </div>
@@ -462,7 +467,7 @@ function ComparePage() {
         )}
 
         <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-          Space play · drag slider to align student with teacher
+          {t("compare.shortcuts")}
         </p>
       </main>
     </div>
@@ -480,6 +485,7 @@ function VideoSlot({
   onFile: (f: File) => void;
   videoRef: React.RefObject<HTMLVideoElement | null>;
 }) {
+  const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   return (
     <div className="space-y-2">
@@ -492,7 +498,7 @@ function VideoSlot({
             onClick={() => inputRef.current?.click()}
             className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
           >
-            Replace
+            {t("compare.replace")}
           </button>
         )}
       </div>
@@ -527,9 +533,9 @@ function VideoSlot({
           className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border bg-card text-center text-sm text-muted-foreground hover:border-foreground/40 hover:text-foreground"
         >
           <span className="font-serif text-xl text-foreground">
-            Upload {label.toLowerCase()} video
+            {t("compare.uploadLabel", { label })}
           </span>
-          <span className="text-xs">Click or drop a file</span>
+          <span className="text-xs">{t("compare.uploadHint")}</span>
         </button>
       )}
     </div>
