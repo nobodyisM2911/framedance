@@ -374,7 +374,7 @@ function Index() {
             <section className="flex flex-wrap items-end gap-x-8 gap-y-4">
               <div className="space-y-2">
                 <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                  Speed
+                  {t("controls.speed")}
                 </label>
                 <div className="inline-flex rounded-md border border-border bg-card p-0.5">
                   {PLAYBACK_SPEEDS.map((s) => (
@@ -395,7 +395,7 @@ function Index() {
 
               <div className="space-y-2">
                 <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                  View
+                  {t("controls.view")}
                 </label>
                 <button
                   onClick={toggleMirror}
@@ -405,13 +405,13 @@ function Index() {
                       : "border-border bg-card text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  Mirror
+                  {t("controls.mirror")}
                 </button>
               </div>
 
               <div className="space-y-2">
                 <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                  Sensitivity
+                  {t("controls.sensitivity")}
                 </label>
                 <div className="inline-flex rounded-md border border-border bg-card p-0.5">
                   {SENSITIVITY_LEVELS.map((s) => (
@@ -425,7 +425,7 @@ function Index() {
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      {s.label}
+                      {t(s.labelKey)}
                     </button>
                   ))}
                 </div>
@@ -437,28 +437,30 @@ function Index() {
                   onClick={addCurrent}
                   disabled={analyzing}
                 >
-                  Mark frame
+                  {t("actions.markFrame")}
                 </Button>
                 <Button onClick={runAnalysis} disabled={analyzing}>
                   {analyzing
-                    ? `Analyzing ${Math.round(progress * 100)}%`
+                    ? t("actions.analyzingProgress", { pct: Math.round(progress * 100) })
                     : poses.length
-                      ? "Re-analyze"
-                      : "Detect poses"}
+                      ? t("actions.reanalyzePoses")
+                      : t("actions.detectPoses")}
                 </Button>
               </div>
             </section>
 
             <section>
               <div className="mb-3 flex items-baseline justify-between">
-                <h2 className="font-serif text-lg">Poses</h2>
+                <h2 className="font-serif text-lg">{t("poses.title")}</h2>
                 <span className="text-xs text-muted-foreground">
-                  {poses.length} {poses.length === 1 ? "frame" : "frames"}
+                  {poses.length === 1
+                    ? t("poses.frame", { n: poses.length })
+                    : t("poses.frames", { n: poses.length })}
                 </span>
               </div>
               {poses.length === 0 ? (
                 <p className="rounded-md border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
-                  No poses yet. Run detection or mark a frame manually.
+                  {t("poses.empty")}
                 </p>
               ) : (
                 <div className="flex gap-3 overflow-x-auto pb-2">
@@ -475,8 +477,7 @@ function Index() {
                 </div>
               )}
               <p className="mt-4 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                Space play · M mirror · A add · Del remove · drag ◆ on timeline
-                to refine timing
+                {t("poses.shortcuts")}
               </p>
             </section>
           </div>
