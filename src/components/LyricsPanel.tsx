@@ -51,7 +51,7 @@ export function LyricsPanel({
 
   const handleSearch = async () => {
     if (!title.trim() || !artist.trim()) {
-      setStatus({ kind: "error", message: "Enter song title and artist." });
+      setStatus({ kind: "error", message: t("lyrics.enterInputs") });
       return;
     }
     setStatus({ kind: "searching" });
@@ -61,18 +61,14 @@ export function LyricsPanel({
         onChange(r.lines);
         setStatus({
           kind: "found",
-          message: `Synced lyrics from LRCLIB · ${r.meta.artistName} — ${r.meta.trackName}`,
+          message: t("lyrics.foundSynced", { artist: r.meta.artistName, track: r.meta.trackName }),
         });
       } else if (r.status === "plain") {
-        // Distribute plain lines evenly across the track as a starting point.
         const split = r.text.split(/\r?\n/).filter((l) => l.trim());
         const total = Math.max(duration ?? 0, 1);
         const step = total / Math.max(split.length, 1);
         onChange(split.map((text, i) => ({ time: i * step, text })));
-        setStatus({
-          kind: "found",
-          message: "Plain lyrics found · timings estimated, edit to refine.",
-        });
+        setStatus({ kind: "found", message: t("lyrics.foundPlain") });
       } else {
         setStatus({ kind: "not_found" });
       }
@@ -90,14 +86,11 @@ export function LyricsPanel({
     try {
       const lines = await transcribeAudio(audioFile);
       onChange(lines);
-      setStatus({ kind: "found", message: "Transcribed from audio." });
+      setStatus({ kind: "found", message: t("lyrics.transcribed") });
     } catch (e) {
       setStatus({
         kind: "error",
-        message:
-          e instanceof Error
-            ? e.message
-            : "Transcription unavailable. Use search or upload a .lrc.",
+        message: e instanceof Error ? e.message : t("lyrics.transcribeError"),
       });
     }
   };
@@ -105,7 +98,7 @@ export function LyricsPanel({
   const handleUpload = async (f: File) => {
     const text = await f.text();
     onChange(parseLrc(text));
-    setStatus({ kind: "found", message: `Loaded ${f.name}` });
+    setStatus({ kind: "found", message: t("lyrics.loaded", { name: f.name }) });
   };
 
   const updateLine = (i: number, patch: Partial<LyricLine>) => {
