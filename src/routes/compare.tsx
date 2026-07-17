@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { LanguageSwitcher, useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/compare")({
   head: () => ({
@@ -24,6 +25,7 @@ function fmt(t: number) {
 }
 
 function ComparePage() {
+  const { t } = useI18n();
   const teacherRef = useRef<HTMLVideoElement>(null);
   const studentRef = useRef<HTMLVideoElement>(null);
   const [teacherUrl, setTeacherUrl] = useState<string | null>(null);
