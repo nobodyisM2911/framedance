@@ -340,33 +340,36 @@ function ComparePage() {
             </Link>
             <nav className="flex gap-6 text-[0.7rem] uppercase tracking-[0.28em] text-muted-foreground">
               <Link to="/" className="hover:text-foreground">
-                Practice
+                {t("nav.practice")}
               </Link>
               <Link
                 to="/compare"
                 className="text-foreground"
                 activeProps={{ className: "text-foreground" }}
               >
-                Compare
+                {t("nav.compare")}
               </Link>
             </nav>
           </div>
-          <p className="text-[0.7rem] uppercase tracking-[0.28em] text-muted-foreground">
-            Side by side
-          </p>
+          <div className="flex items-center gap-5">
+            <p className="text-[0.7rem] uppercase tracking-[0.28em] text-muted-foreground">
+              {t("tag.sideBySide")}
+            </p>
+            <LanguageSwitcher />
+          </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-6xl px-6 py-10 space-y-8">
         <div className="grid gap-4 md:grid-cols-2">
           <VideoSlot
-            label="Teacher"
+            label={t("compare.teacher")}
             url={teacherUrl}
             onFile={onTeacher}
             videoRef={teacherRef}
           />
           <VideoSlot
-            label="Student"
+            label={t("compare.student")}
             url={studentUrl}
             onFile={onStudent}
             videoRef={studentRef}
@@ -379,7 +382,7 @@ function ComparePage() {
               <div className="flex-1 min-w-[280px] space-y-2">
                 <div className="flex items-baseline justify-between">
                   <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                    Sync offset
+                    {t("compare.syncOffset")}
                   </label>
                   <span className="font-mono text-xs text-muted-foreground">
                     {offset >= 0 ? "+" : ""}
@@ -408,7 +411,7 @@ function ComparePage() {
                       }
                       className="rounded border border-border bg-card px-2 py-1 font-mono text-[11px] text-muted-foreground hover:text-foreground"
                     >
-                      {d === 0 ? "reset" : `${d > 0 ? "+" : ""}${d}s`}
+                      {d === 0 ? t("compare.reset") : `${d > 0 ? "+" : ""}${d}s`}
                     </button>
                   ))}
                 </div>
@@ -416,26 +419,26 @@ function ComparePage() {
 
               <div className="flex gap-2">
                 <Button variant="outline" onClick={restart}>
-                  Restart
+                  {t("compare.restart")}
                 </Button>
                 <Button onClick={togglePlay}>
-                  {playing ? "Pause both" : "Play both"}
+                  {playing ? t("compare.pauseBoth") : t("compare.playBoth")}
                 </Button>
               </div>
             </section>
 
             <section className="space-y-3">
               <div className="flex items-baseline justify-between">
-                <h2 className="font-serif text-lg">Export</h2>
+                <h2 className="font-serif text-lg">{t("compare.exportTitle")}</h2>
                 <span className="text-xs text-muted-foreground">
-                  Side-by-side WebM via Canvas + MediaRecorder
+                  {t("compare.exportSub")}
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <Button onClick={exportSideBySide} disabled={exporting}>
                   {exporting
-                    ? `Exporting ${Math.round(exportProgress * 100)}%`
-                    : "Export comparison"}
+                    ? t("compare.exporting", { pct: Math.round(exportProgress * 100) })
+                    : t("compare.export")}
                 </Button>
                 {exportMsg && (
                   <span className="text-xs text-muted-foreground">
@@ -448,7 +451,7 @@ function ComparePage() {
                     download="comparison.webm"
                     className="text-xs underline underline-offset-4 hover:text-foreground"
                   >
-                    Download comparison.webm
+                    {t("compare.download")}
                   </a>
                 )}
               </div>
@@ -464,7 +467,7 @@ function ComparePage() {
         )}
 
         <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-          Space play · drag slider to align student with teacher
+          {t("compare.shortcuts")}
         </p>
       </main>
     </div>
