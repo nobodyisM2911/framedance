@@ -308,11 +308,17 @@ function Index() {
             <section className="space-y-3">
               <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                  <h2 className="font-serif text-lg">Rhythm</h2>
+                  <h2 className="font-serif text-lg">{t("rhythm.title")}</h2>
                   <p className="text-xs text-muted-foreground">
                     {audio
-                      ? `${audio.bpm.toFixed(1)} BPM · ${adjustedBeats.beats.length} beats · ${audio.accents.length} accents · ${audio.peaks.length} peaks · ${audio.drops.length} drops`
-                      : "Detect BPM, beats, accents, and energy peaks."}
+                      ? t("rhythm.stats", {
+                          bpm: audio.bpm.toFixed(1),
+                          beats: adjustedBeats.beats.length,
+                          accents: audio.accents.length,
+                          peaks: audio.peaks.length,
+                          drops: audio.drops.length,
+                        })
+                      : t("rhythm.empty")}
                   </p>
                 </div>
                 <Button
@@ -321,10 +327,10 @@ function Index() {
                   disabled={analyzingAudio}
                 >
                   {analyzingAudio
-                    ? "Analyzing audio…"
+                    ? t("rhythm.analyzing")
                     : audio
-                      ? "Re-analyze audio"
-                      : "Analyze audio"}
+                      ? t("rhythm.reanalyze")
+                      : t("rhythm.analyze")}
                 </Button>
               </div>
 
@@ -332,7 +338,7 @@ function Index() {
                 <>
                   <div className="grid gap-4 md:grid-cols-2">
                     <RangeControl
-                      label="First count"
+                      label={t("rhythm.firstCount")}
                       value={firstCount}
                       min={0}
                       max={Math.min(8, audio.duration)}
@@ -341,7 +347,7 @@ function Index() {
                       onChange={setFirstCount}
                     />
                     <RangeControl
-                      label="Beat offset"
+                      label={t("rhythm.beatOffset")}
                       value={beatOffset}
                       min={-0.5}
                       max={0.5}
