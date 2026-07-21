@@ -27,7 +27,7 @@
   "sensitivity.high": "高",
 
   "actions.markFrame": "标记当前帧",
-  "actions.detectPoses": "检测姿势",
+  "actions.detectPoses": "生成",
   "actions.reanalyzePoses": "重新检测",
   "actions.analyzingProgress": "分析中 {pct}%",
 
